@@ -1,0 +1,206 @@
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 7, 18, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: overlayIn 0.2s ease-out forwards;
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal-content {
+  animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.92) translateY(16px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ─── Auth Modal ─── */
+.auth-modal {
+  width: 100%;
+  max-width: 400px;
+  padding: 2.25rem;
+  position: relative;
+  background: rgba(5, 10, 26, 0.9);
+  border: 1px solid rgba(192, 132, 252, 0.2);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.04) inset,
+    0 20px 60px rgba(0, 0, 0, 0.6),
+    0 0 40px rgba(192, 132, 252, 0.08);
+}
+
+/* ─── Close Button ─── */
+.close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-smooth);
+}
+
+.close-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.1);
+  transform: rotate(90deg);
+}
+
+/* ─── Logo ─── */
+.auth-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+  justify-content: center;
+}
+
+.auth-logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(192, 132, 252, 0.2));
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-neon-blue);
+}
+
+.auth-logo-text {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* ─── Headings ─── */
+.auth-heading {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-main);
+  text-align: center;
+  margin-bottom: 0.3rem;
+  letter-spacing: -0.02em;
+}
+
+.auth-sub {
+  text-align: center;
+  font-size: 0.82rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ─── Form ─── */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.input-group { display: flex; flex-direction: column; gap: 0.3rem; }
+
+.input-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+}
+
+/* ─── Password Field ─── */
+.password-wrapper { position: relative; }
+
+.password-input { padding-right: 2.8rem; }
+
+.password-toggle {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color 150ms ease;
+  padding: 0;
+}
+
+.password-toggle:hover { color: var(--text-main); }
+
+/* ─── Submit Button ─── */
+.auth-submit {
+  width: 100%;
+  justify-content: center;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+  border-radius: var(--radius-md);
+}
+
+/* ─── Error ─── */
+.auth-error {
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: #fca5a5;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  text-align: center;
+  animation: fadeIn 0.2s ease;
+}
+
+/* ─── Switch Link ─── */
+.auth-switch {
+  text-align: center;
+  margin-top: 1.25rem;
+  font-size: 0.82rem;
+  margin-bottom: 0;
+}
+
+.auth-link {
+  color: var(--accent-neon-blue);
+  cursor: pointer;
+  font-weight: 600;
+  transition: var(--transition-fast);
+}
+
+.auth-link:hover { color: var(--accent-neon-purple); text-decoration: underline; }
+
+/* Global futuristic-input (also defined here for auth context) */
+.futuristic-input {
+  background: rgba(2, 6, 23, 0.7);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 0.7rem 1rem;
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.875rem;
+  transition: var(--transition-smooth);
+  outline: none;
+  width: 100%;
+}
+
+.futuristic-input:focus {
+  border-color: var(--accent-neon-purple);
+  box-shadow: 0 0 0 3px rgba(192, 132, 252, 0.1);
+}
+
+.futuristic-input::placeholder { color: var(--text-muted); }
