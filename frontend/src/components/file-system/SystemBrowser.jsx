@@ -17,7 +17,8 @@ const SystemBrowser = ({ onSelectPath, initialPath = '' }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:5050/api/files/browse', {
+      const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+      const response = await fetch(`${BACKEND_URL}/api/files/browse`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ targetPath: path })

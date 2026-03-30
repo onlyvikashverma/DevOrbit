@@ -17,8 +17,8 @@ const AuthModal = ({ onClose }) => {
     setLoading(true);
     try {
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-      const res = await fetch(`https://devorbit-pao9.onrender.com${endpoint}`, {
-        //5000
+      const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+      const res = await fetch(`${BACKEND_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(isLogin

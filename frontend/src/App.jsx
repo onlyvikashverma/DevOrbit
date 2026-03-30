@@ -20,7 +20,8 @@ const BOILERPLATES = {
   html: '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8" />\n  <title>DevOrbit</title>\n</head>\n<body>\n  <h1>Hello, DevOrbit!</h1>\n</body>\n</html>\n',
 };
 
-const API_URL = 'https://devorbit-pao9.onrender.com/api/files';
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+const API_URL = `${BACKEND_URL}/api/files`;
 
 function App() {
   const [activePanel, setActivePanel] = useState('explorer');
@@ -267,7 +268,7 @@ function App() {
     setLogs(prev => [...prev, { type: 'info', message: `▶ Running ${currentFile.name}...` }]);
 
     try {
-      const res = await fetch('https://devorbit-pao9.onrender.com/execute', {
+      const res = await fetch(`${BACKEND_URL}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ language, content: currentFile.content })

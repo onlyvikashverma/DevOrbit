@@ -159,7 +159,7 @@ const CollabPanel = () => (
     </div>
     <p className="text-muted collab-hint">Share your session with others using the link below:</p>
     <div className="collab-link-row">
-      <span className="collab-link-text">localhost:5173/?room=devorbit</span>
+      <span className="collab-link-text">{window.location.host}/?room=devorbit</span>
     </div>
   </div>
 );
