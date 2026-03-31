@@ -2,12 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import Sidebar from './components/layout/Sidebar';
 import BottomConsole from './components/layout/BottomConsole';
 import MonacoWorkspace from './components/editor/MonacoWorkspace';
+import AiAssistant from './components/ai/AiAssistant';
+import CommandPalette from './components/layout/CommandPalette';
 import AuthModal from './components/auth/AuthModal';
 import { useAuthStore } from './store/useAuthStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useToast } from './components/ui/Toast';
 import { socket, connectSocket, disconnectSocket } from './services/socket';
-import { Play, LogIn, LogOut, Wifi, WifiOff, Zap } from 'lucide-react';
+import { Play, LogIn, LogOut, Wifi, WifiOff, Zap, Sparkles } from 'lucide-react';
 import './App.css';
 
 const BOILERPLATES = {
@@ -29,11 +31,19 @@ function App() {
   const [openFileIds, setOpenFileIds] = useState([]);
   const [currentFileId, setCurrentFileId] = useState(null);
   const [logs, setLogs] = useState([]);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [connected, setConnected] = useState(false);
   const [clock, setClock] = useState('');
   const [lastExecTime, setLastExecTime] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [stdin, setStdin] = useState('');
+  const [showAiAssistant, setShowAiAssistant] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [activities, setActivities] = useState([
+    { id: 'initial', type: 'info', message: 'DevOrbit Workspace initialized.', timestamp: new Date() }
+  ]);
+  const [showPalette, setShowPalette] = useState(false);
 
   const { user, token, logout } = useAuthStore();
   const { theme } = useSettingsStore();
@@ -86,10 +96,17 @@ function App() {
 
   // ─── Socket ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    connectSocket(token);
+    // Pass user info during handshake for presence
+    const query = user ? { userId: user.id, userName: user.name } : {};
+    connectSocket(token, query);
 
     socket.on('connect', () => setConnected(true));
     socket.on('disconnect', () => setConnected(false));
+    socket.on('presence-update', (users) => {
+      // Filter out users who are not logged in (Anonymous guests)
+      const namedUsers = users.filter(u => u.userName && !u.userName.startsWith('Anonymous'));
+      setOnlineUsers(namedUsers);
+    });
     socket.on('code_update', ({ fileId, newCode }) => {
       setFiles(prev => prev.map(f => f.id === fileId ? { ...f, content: newCode } : f));
     });
@@ -97,27 +114,22 @@ function App() {
     return () => {
       socket.off('connect');
       socket.off('disconnect');
+      socket.off('presence-update');
       socket.off('code_update');
       disconnectSocket();
     };
-  }, [token]);
-
-  // ─── Ctrl+Enter shortcut ─────────────────────────────────────────────────
-  useEffect(() => {
-    const onKey = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        handleRunCode();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [currentFile]);
+  }, [token, user]);
 
   // ─── Code change ─────────────────────────────────────────────────────────
   const handleCodeChange = (fileId, value) => {
     setFiles(prev => prev.map(f => f.id === fileId ? { ...f, content: value } : f));
     socket.emit('code_change', { fileId, newCode: value });
+    setActivities(prev => [{ 
+      id: Date.now(), 
+      type: 'save', 
+      message: `Modified ${files.find(f => f.id === fileId)?.name || 'file'}`, 
+      timestamp: new Date() 
+    }, ...prev].slice(0, 20));
 
     if (window.saveTimeout) clearTimeout(window.saveTimeout);
     window.saveTimeout = setTimeout(async () => {
@@ -159,6 +171,12 @@ function App() {
       } else {
         toast.success(`Folder "${name}" created`);
       }
+      setActivities(prev => [{ 
+        id: Date.now(), 
+        type: 'create', 
+        message: `Created ${type} "${name}"`, 
+        timestamp: new Date() 
+      }, ...prev].slice(0, 20));
     } catch (e) {
       toast.error('Failed to create file');
       console.error('Creation error:', e);
@@ -175,6 +193,12 @@ function App() {
       setFiles(prev => prev.filter(f => f.id !== id && f.parentId !== id));
       if (openFileIds.includes(id)) handleTabClose(id);
       toast.success(`Deleted "${node?.name}"`);
+      setActivities(prev => [{ 
+        id: Date.now(), 
+        type: 'delete', 
+        message: `Deleted "${node?.name}"`, 
+        timestamp: new Date() 
+      }, ...prev].slice(0, 20));
     } catch (e) {
       toast.error('Delete failed');
     }
@@ -212,7 +236,8 @@ function App() {
 
   // ─── Sync Local Files ─────────────────────────────────────────────────────
   const handleSyncProject = useCallback(async (customPath = null, clearExisting = false) => {
-    toast.info(customPath ? `Scanning ${customPath}...` : 'Scanning laptop folder...');
+    setIsSyncing(true);
+    toast.info(customPath ? `Indexing ${customPath}...` : 'Scanning workspace...');
     try {
       const resp = await fetch(`${API_URL}/sync`, { 
         method: 'POST',
@@ -226,9 +251,11 @@ function App() {
       const res = await fetch(API_URL);
       const data = await res.json();
       setFiles(data);
-      toast.success(customPath ? 'Folder opened successfully!' : 'Project synced successfully!');
+      toast.success('Workspace Synced');
     } catch (e) {
-      toast.error(e.message || 'Sync failed. Is the backend running?');
+      toast.error(e.message || 'Sync failed. Is the backend running?'); 
+    } finally {
+      setIsSyncing(false);
     }
   }, [toast]);
 
@@ -271,7 +298,7 @@ function App() {
       const res = await fetch(`${BACKEND_URL}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language, content: currentFile.content })
+        body: JSON.stringify({ language, content: currentFile.content, stdin })
       });
       
       if (!res.ok) {
@@ -300,6 +327,49 @@ function App() {
 
   };
 
+  // ─── Keybinds ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        handleRunCode();
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'k')) {
+        e.preventDefault();
+        setShowPalette(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [currentFile, handleRunCode]);
+  
+  // ─── Neural Protection (Anti-Inspect) ──────────────────────────────────────
+  useEffect(() => {
+    // Disable right-click globally
+    const handleContextMenu = (e) => e.preventDefault();
+    
+    // Disable inspection shortcuts
+    const handleInspectKey = (e) => {
+      if (
+        e.key === 'F12' || 
+        ((e.ctrlKey || e.metaKey) && (e.shiftKey) && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+        ((e.ctrlKey || e.metaKey) && (e.key === 'u'))
+      ) {
+        e.preventDefault();
+        toast.info('Neural Protection Active: Inspection blocked.');
+      }
+    };
+
+    window.addEventListener('contextmenu', handleContextMenu);
+    window.addEventListener('keydown', handleInspectKey);
+    
+    return () => {
+      window.removeEventListener('contextmenu', handleContextMenu);
+      window.removeEventListener('keydown', handleInspectKey);
+    };
+  }, [toast]);
+
+
   return (
     <div className="devorbit-layout">
       <Sidebar
@@ -311,7 +381,7 @@ function App() {
         onFileRename={handleRenameNode}
         onFileSelect={handleFileSelect}
         currentFileId={currentFileId}
-        onSyncProject={handleSyncProject}
+        isSyncing={isSyncing}
       />
 
       <div className="main-content">
@@ -320,7 +390,7 @@ function App() {
           {/* Left: Logo */}
           <div className="nav-left">
             <div className="nav-logo">
-              <Zap size={18} strokeWidth={2.5} />
+              <Zap size={21} strokeWidth={2.5} />
             </div>
             <span className="nav-brand text-gradient">DevOrbit</span>
             {currentFile && (
@@ -338,6 +408,25 @@ function App() {
 
           {/* Right: Actions */}
           <div className="nav-right">
+            {/* Presence Avatars */}
+            <div className="presence-avatars">
+              {onlineUsers.slice(0, 4).map(u => (
+                <div 
+                  key={u.id} 
+                  className="user-dot" 
+                  style={{ '--user-color': u.userColor }}
+                  title={`${u.userName} ${u.id === socket.id ? '(You)' : ''}`}
+                >
+                  {u.userName[0].toUpperCase()}
+                </div>
+              ))}
+              {onlineUsers.length > 4 && (
+                <div className="user-dot more-users">+{onlineUsers.length - 4}</div>
+              )}
+            </div>
+
+            <span className="nav-divider" />
+
             {/* Connection Status */}
             <span className={`conn-status ${connected ? 'online' : 'offline'}`} title={connected ? 'Real-time sync active' : 'Not connected'}>
               {connected ? <Wifi size={14} /> : <WifiOff size={14} />}
@@ -357,6 +446,14 @@ function App() {
                 <LogIn size={14} /> Sign In
               </button>
             )}
+
+            <button 
+              className={`icon-btn nav-icon-btn ai-toggle-btn ${showAiAssistant ? 'active' : ''}`}
+              onClick={() => setShowAiAssistant(!showAiAssistant)}
+              title="DevOrbit AI Assistant"
+            >
+              <Sparkles size={18} className={showAiAssistant ? 'neon-text' : ''} />
+            </button>
 
             <button
               className={`btn-run ${isRunning ? 'running' : ''}`}
@@ -383,11 +480,42 @@ function App() {
               onTabClose={handleTabClose}
               onLanguageChange={handleLanguageChange}
               onQuickAction={handleQuickAction}
+              activities={activities}
+              files={files}
             />
           </div>
-          <BottomConsole logs={logs} onClear={() => setLogs([])} lastExecTime={lastExecTime} />
+          <BottomConsole 
+            logs={logs} 
+            onClear={() => setLogs([])} 
+            lastExecTime={lastExecTime} 
+            stdin={stdin}
+            onStdinChange={setStdin}
+          />
         </div>
       </div>
+
+      <AiAssistant 
+        isOpen={showAiAssistant} 
+        onClose={() => setShowAiAssistant(false)} 
+        currentFile={currentFile}
+      />
+
+      <CommandPalette 
+        isOpen={showPalette} 
+        onClose={() => setShowPalette(false)}
+        files={files}
+        onFileSelect={(id) => {
+          setOpenFileIds(prev => prev.includes(id) ? prev : [...prev, id]);
+          setCurrentFileId(id);
+          setShowPalette(false);
+        }}
+        commands={[
+          { id: 'clear-logs', label: 'Clear Console Logs', action: () => setLogs([]) },
+          { id: 'toggle-ai', label: 'Toggle AI Assistant', action: () => setShowAiAssistant(!showAiAssistant) },
+          { id: 'new-js', label: 'New JavaScript File', action: () => handleQuickAction('new-js') },
+          { id: 'new-py', label: 'New Python File', action: () => handleQuickAction('new-py') },
+        ]}
+      />
 
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
     </div>

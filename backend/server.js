@@ -4,6 +4,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { Server } from 'socket.io';
 import mongoose from 'mongoose';
+import { spawn } from 'child_process';
 import fileRoutes from './src/routes/fileRoutes.js';
 import executeRoutes from './src/routes/executeRoutes.js';
 import authRoutes from './src/routes/authRoutes.js';
@@ -19,6 +20,10 @@ console.log('Loaded Environment Variables:', {
 
 const app = express();
 const server = http.createServer(app);
+
+// Global presence state
+const onlineUsers = new Map();
+const USER_COLORS = ['#38bdf8', '#c084fc', '#4ade80', '#fb923c', '#f472b6', '#fbbf24'];
 
 // Enable CORS for frontend (Multiple origins support)
 const allowedOrigins = process.env.FRONTEND_URL 
@@ -58,13 +63,63 @@ const io = new Server(server, {
 
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
+  
+  // Assign a random identity for presence if not logged in
+  const userId = socket.handshake.query.userId || `guest-${socket.id.slice(0,4)}`;
+  const userName = socket.handshake.query.userName || `Anonymous ${socket.id.slice(0,3)}`;
+  const userColor = USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
+
+  onlineUsers.set(socket.id, {
+    id: socket.id,
+    userId,
+    userName,
+    userColor,
+    fileId: null,
+    cursor: { line: 1, col: 1 }
+  });
+
+  // Broadcast the updated user list to everyone
+  io.emit('presence-update', Array.from(onlineUsers.values()));
+
+  // Persistent shell for terminal
+  const shell = spawn('powershell.exe', ['-NoExit', '-Command', '-'], {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    env: process.env
+  });
+
+  shell.stdout.on('data', (data) => socket.emit('terminal-output', data.toString()));
+  shell.stderr.on('data', (data) => socket.emit('terminal-output', `[ERR] ${data.toString()}`));
+
+  socket.on('terminal-input', (data) => {
+    if (shell.stdin.writable) shell.stdin.write(data);
+  });
+
+  // --- Collaboration Events ---
+  socket.on('cursor-move', (data) => {
+    const user = onlineUsers.get(socket.id);
+    if (user) {
+      user.fileId = data.fileId;
+      user.cursor = data.cursor;
+      // Broadcast to everyone else
+      socket.broadcast.emit('remote-cursor-move', {
+        id: socket.id,
+        userName: user.userName,
+        userColor: user.userColor,
+        fileId: data.fileId,
+        cursor: data.cursor
+      });
+    }
+  });
 
   socket.on('code_change', (data) => {
-    socket.broadcast.emit('code_update', { newCode: data.newCode });
+    socket.broadcast.emit('code_update', { fileId: data.fileId, newCode: data.newCode });
   });
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
+    onlineUsers.delete(socket.id);
+    io.emit('presence-update', Array.from(onlineUsers.values()));
+    shell.kill();
   });
 });
 

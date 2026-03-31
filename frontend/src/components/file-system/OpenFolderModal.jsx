@@ -20,8 +20,8 @@ const OpenFolderModal = ({ onClose, onOpenPath }) => {
   };
 
   const handleBrowserSelect = (selectedPath) => {
-    setPath(selectedPath);
-    setMode('input'); // Switch back to see the path if needed, or just submit
+    onOpenPath(selectedPath, clearExisting);
+    onClose();
   };
 
   return (

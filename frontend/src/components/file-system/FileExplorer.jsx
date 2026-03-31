@@ -1,10 +1,11 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   ChevronRight, ChevronDown, File, Folder, FolderOpen,
   FilePlus, FolderPlus, Trash2, Edit2, Check, X,
   MoreVertical, FileCode, FileJson, FileText, Coffee,
-  RotateCcw, FolderSearch
+  RotateCcw, FolderSearch, Search
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import OpenFolderModal from './OpenFolderModal';
 import './FileExplorer.css';
 
@@ -25,6 +26,9 @@ const EXT_CONFIG = {
   sh: { color: '#4ade80', label: 'SH' },
   rs: { color: '#fb923c', label: 'RS' },
   go: { color: '#67e8f9', label: 'GO' },
+  php: { color: '#777bb4', label: 'PHP' },
+  rb: { color: '#e33332', label: 'RB' },
+  swift: { color: '#f05138', label: 'SW' },
 };
 
 function getExtConfig(name) {
@@ -41,7 +45,13 @@ const ContextMenu = ({ x, y, node, onRename, onDelete, onNewFile, onNewFolder, o
   }, [onClose]);
 
   return (
-    <div className="context-menu animate-fade-in" style={{ top: y, left: x }}>
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="context-menu glass-panel" 
+      style={{ top: y, left: x }}
+    >
       {node?.type === 'folder' && (
         <>
           <button className="ctx-item" onClick={() => { onNewFile(node.id); onClose(); }}>
@@ -59,7 +69,7 @@ const ContextMenu = ({ x, y, node, onRename, onDelete, onNewFile, onNewFolder, o
       <button className="ctx-item ctx-item-danger" onClick={() => { onDelete(node.id); onClose(); }}>
         <Trash2 size={13} /> Delete
       </button>
-    </div>
+    </motion.div>
   );
 };
 
@@ -70,12 +80,17 @@ const InlineInput = ({ type, onConfirm, onCancel }) => {
   useEffect(() => inputRef.current?.focus(), []);
 
   return (
-    <div className="inline-create-row">
+    <motion.div 
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="inline-create-row"
+    >
       {type === 'folder' ? <Folder size={14} style={{ color: '#38bdf8', flexShrink: 0 }} /> : <File size={14} style={{ color: '#94a3b8', flexShrink: 0 }} />}
       <input
         ref={inputRef}
         className="inline-input"
         value={val}
+        autoFocus
         placeholder={type === 'folder' ? 'folder-name' : 'file.js'}
         onChange={e => setVal(e.target.value)}
         onKeyDown={e => {
@@ -83,9 +98,11 @@ const InlineInput = ({ type, onConfirm, onCancel }) => {
           if (e.key === 'Escape') onCancel();
         }}
       />
-      <button className="confirm-btn" onClick={() => val.trim() && onConfirm(val.trim())}><Check size={12} /></button>
-      <button className="cancel-btn" onClick={onCancel}><X size={12} /></button>
-    </div>
+      <div className="inline-actions">
+        <button className="confirm-btn" onClick={() => val.trim() && onConfirm(val.trim())}><Check size={12} /></button>
+        <button className="cancel-btn" onClick={onCancel}><X size={12} /></button>
+      </div>
+    </motion.div>
   );
 };
 
@@ -93,10 +110,11 @@ const InlineInput = ({ type, onConfirm, onCancel }) => {
 const FileNode = ({
   node, level, allFiles, onSelect, activeId,
   onRename, onDelete, onCreateNode, onTriggerRename, renamingId,
+  searchQuery
 }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [editName, setEditName] = useState(node.name);
-  const [inlineCreate, setInlineCreate] = useState(null); // { type: 'file'|'folder' }
+  const [inlineCreate, setInlineCreate] = useState(null); 
   const [ctxMenu, setCtxMenu] = useState(null);
   const inputRef = useRef(null);
 
@@ -105,10 +123,18 @@ const FileNode = ({
   const isActive = nid === activeId;
   const isRenaming = renamingId === nid;
   const extCfg = getExtConfig(node.name);
-  const children = allFiles.filter(f => {
-    const pid = f.parentId || f.parent?.toString();
-    return pid === nid;
-  });
+  
+  const children = useMemo(() => 
+    allFiles.filter(f => (f.parentId || f.parent?.toString()) === nid),
+    [allFiles, nid]
+  );
+
+  // If search matches a child, ensure folder is open
+  useEffect(() => {
+    if (searchQuery && children.some(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))) {
+      setIsOpen(true);
+    }
+  }, [searchQuery, children]);
 
   useEffect(() => {
     if (isRenaming) { setEditName(node.name); setTimeout(() => inputRef.current?.focus(), 50); }
@@ -124,23 +150,45 @@ const FileNode = ({
     if (editName.trim()) onRename(node.id, editName.trim());
   };
 
-  return (
-    <div className="file-node-container" style={{ paddingLeft: `${level * 14}px` }}>
-      {ctxMenu && (
-        <ContextMenu
-          x={ctxMenu.x} y={ctxMenu.y} node={node}
-          onRename={onTriggerRename}
-          onDelete={() => onDelete(node.id)}
-          onNewFile={(pid) => setInlineCreate({ type: 'file', parentId: pid })}
-          onNewFolder={(pid) => setInlineCreate({ type: 'folder', parentId: pid })}
-          onClose={() => setCtxMenu(null)}
-        />
-      )}
+  // Hide if searching and neither this node nor any descendant matches
+  const matchesSearch = !searchQuery || node.name.toLowerCase().includes(searchQuery.toLowerCase());
+  const descendantMatches = useMemo(() => {
+    if (!searchQuery) return true;
+    const findMatch = (nodes) => {
+      for (const n of nodes) {
+        if (n.name.toLowerCase().includes(searchQuery.toLowerCase())) return true;
+        const subChildren = allFiles.filter(f => (f.parentId || f.parent?.toString()) === n.id);
+        if (findMatch(subChildren)) return true;
+      }
+      return false;
+    };
+    return findMatch(children);
+  }, [searchQuery, children, allFiles]);
 
-      <div
+  if (searchQuery && !matchesSearch && !descendantMatches) return null;
+
+  return (
+    <div className="file-node-container" style={{ paddingLeft: `${level * 12}px` }}>
+      <AnimatePresence>
+        {ctxMenu && (
+          <ContextMenu
+            x={ctxMenu.x} y={ctxMenu.y} node={node}
+            onRename={onTriggerRename}
+            onDelete={() => onDelete(node.id)}
+            onNewFile={(pid) => setInlineCreate({ type: 'file', parentId: pid })}
+            onNewFolder={(pid) => setInlineCreate({ type: 'folder', parentId: pid })}
+            onClose={() => setCtxMenu(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      <motion.div
+        layout
         className={`file-node ${!isFolder ? 'file-item' : ''} ${isActive ? 'active-node' : ''}`}
         onClick={() => { if (isFolder) setIsOpen(o => !o); else onSelect(node); }}
         onContextMenu={handleContextMenu}
+        whileHover={{ x: 4 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       >
         <span className="file-icon-group">
           {isFolder ? (
@@ -151,7 +199,7 @@ const FileNode = ({
           ) : (
             <>
               <span style={{ width: 13, display: 'inline-block' }} />
-              <span className="file-ext-badge" style={{ background: extCfg.color + '22', color: extCfg.color, border: `1px solid ${extCfg.color}44` }}>
+              <span className="file-ext-badge" style={{ background: extCfg.color + '15', color: extCfg.color, border: `1px solid ${extCfg.color}33` }}>
                 {extCfg.label}
               </span>
             </>
@@ -167,11 +215,21 @@ const FileNode = ({
               onChange={e => setEditName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleSaveRename(); if (e.key === 'Escape') onTriggerRename(null); }}
             />
-            <button className="confirm-btn" onClick={handleSaveRename}><Check size={12} /></button>
-            <button className="cancel-btn" onClick={() => onTriggerRename(null)}><X size={12} /></button>
+            <div className="rename-actions">
+              <button className="confirm-btn" onClick={handleSaveRename}><Check size={12} /></button>
+              <button className="cancel-btn" onClick={() => onTriggerRename(null)}><X size={12} /></button>
+            </div>
           </div>
         ) : (
-          <span className="file-name" title={node.name}>{node.name}</span>
+          <span className="file-name" title={node.name}>
+            {searchQuery ? (
+               node.name.split(new RegExp(`(${searchQuery})`, 'gi')).map((part, i) => 
+                part.toLowerCase() === searchQuery.toLowerCase() 
+                  ? <span key={i} className="search-highlight">{part}</span> 
+                  : part
+              )
+            ) : node.name}
+          </span>
         )}
 
         {!isRenaming && (
@@ -194,36 +252,45 @@ const FileNode = ({
             </button>
           </div>
         )}
-      </div>
+      </motion.div>
 
-      {isFolder && isOpen && (
-        <div className="folder-children">
-          {inlineCreate && (
-            <div style={{ paddingLeft: '14px' }}>
-              <InlineInput
-                type={inlineCreate.type}
-                onConfirm={name => { onCreateNode(name, inlineCreate.type, node.id); setInlineCreate(null); }}
-                onCancel={() => setInlineCreate(null)}
+      <AnimatePresence>
+        {isFolder && isOpen && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="folder-children"
+          >
+            {inlineCreate && (
+              <div style={{ paddingLeft: '14px' }}>
+                <InlineInput
+                  type={inlineCreate.type}
+                  onConfirm={name => { onCreateNode(name, inlineCreate.type, node.id); setInlineCreate(null); }}
+                  onCancel={() => setInlineCreate(null)}
+                />
+              </div>
+            )}
+            {children.map(child => (
+              <FileNode
+                key={child.id}
+                node={child}
+                level={level + 1}
+                allFiles={allFiles}
+                onSelect={onSelect}
+                activeId={activeId}
+                onRename={onRename}
+                onDelete={onDelete}
+                onCreateNode={onCreateNode}
+                onTriggerRename={onTriggerRename}
+                renamingId={renamingId}
+                searchQuery={searchQuery}
               />
-            </div>
-          )}
-          {children.map(child => (
-            <FileNode
-              key={child.id}
-              node={child}
-              level={level + 1}
-              allFiles={allFiles}
-              onSelect={onSelect}
-              activeId={activeId}
-              onRename={onRename}
-              onDelete={onDelete}
-              onCreateNode={onCreateNode}
-              onTriggerRename={onTriggerRename}
-              renamingId={renamingId}
-            />
-          ))}
-        </div>
-      )}
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -231,16 +298,15 @@ const FileNode = ({
 // ─── FileExplorer Root ───────────────────────────────────────────────────────
 const FileExplorer = ({
   files, onFileSelect, currentFileId, onFileCreate, onFileDelete, onFileRename,
-  onSyncProject
+  onSyncProject, isSyncing
 }) => {
   const [renamingId, setRenamingId] = useState(null);
-  const [inlineCreate, setInlineCreate] = useState(null); // root-level create
+  const [inlineCreate, setInlineCreate] = useState(null); 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const roots = files.filter(f => !f.parentId);
-  const fileCount = files.filter(f => f.type === 'file').length;
-  const folderCount = files.filter(f => f.type === 'folder').length;
-
+  const roots = useMemo(() => files.filter(f => !f.parentId), [files]);
+  
   const handleRename = useCallback((id, newName) => {
     onFileRename(id, newName);
     setRenamingId(null);
@@ -248,38 +314,76 @@ const FileExplorer = ({
 
   return (
     <div className="file-explorer column-layout">
-      <div className="explorer-toolbar">
-        <span className="toolbar-title">
-          WORKSPACE
-          {/* <span className="file-count-badge">{fileCount}F {folderCount > 0 ? `${folderCount}D` : ''}</span> */}
-        </span>
-        <div className="toolbar-actions">
-          <button title="New File" onClick={() => setInlineCreate({ type: 'file' })}>
-            <FilePlus size={15} />
-          </button>
-          <button title="New Folder" onClick={() => setInlineCreate({ type: 'folder' })}>
-            <FolderPlus size={15} />
-          </button>
+      <div className="explorer-header">
+        <div className="explorer-toolbar">
+          <span className="toolbar-title">
+            {isSyncing ? 'INDEXING...' : 'WORKSPACE'}
+          </span>
+          <div className={`toolbar-actions ${isSyncing ? 'syncing' : ''}`}>
+            {isSyncing ? (
+              <RefreshCw size={14} className="animate-spin" />
+            ) : (
+              <>
+                <button title="Open Folder" onClick={() => setIsModalOpen(true)}>
+                  <FolderSearch size={14} />
+                </button>
+                <div className="toolbar-divider" />
+                <button title="New File" onClick={() => setInlineCreate({ type: 'file' })}>
+                  <FilePlus size={18} strokeWidth={2} />
+                </button>
+                <button title="New Folder" onClick={() => setInlineCreate({ type: 'folder' })}>
+                  <FolderPlus size={18} strokeWidth={2} />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="search-container">
+          <div className="search-box glass-panel">
+            <Search size={12} className="search-icon" />
+            <input 
+              type="text" 
+              placeholder="Search files..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="search-input"
+            />
+            {searchQuery && (
+              <button className="clear-search" onClick={() => setSearchQuery('')}>
+                <X size={12} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="explorer-tree">
-        {inlineCreate && (
-          <InlineInput
-            type={inlineCreate.type}
-            onConfirm={name => { onFileCreate(name, inlineCreate.type, null); setInlineCreate(null); }}
-            onCancel={() => setInlineCreate(null)}
-          />
-        )}
+      <div className="explorer-tree custom-scrollbar">
+        <AnimatePresence>
+          {inlineCreate && (
+            <InlineInput
+              type={inlineCreate.type}
+              onConfirm={name => { onFileCreate(name, inlineCreate.type, null); setInlineCreate(null); }}
+              onCancel={() => setInlineCreate(null)}
+            />
+          )}
+        </AnimatePresence>
 
         {roots.length === 0 && !inlineCreate && (
-          <div className="empty-explorer">
-            <Folder size={32} style={{ opacity: 0.15, color: '#38bdf8', marginBottom: '0.5rem' }} />
-            <p className="text-muted">No files yet</p>
-            <button className="create-first-btn" onClick={() => setIsModalOpen(true)}>
-              <FolderSearch size={13} /> Open Folder
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="empty-explorer"
+          >
+            <div className="empty-glow-circle">
+              <FolderSearch size={24} />
+            </div>
+            <p className="empty-text">No workspace loaded</p>
+            <p className="empty-sub">Open a folder to start development</p>
+            <button className="primary-glass-btn" onClick={() => setIsModalOpen(true)}>
+              Initialize Workspace
             </button>
-          </div>
+          </motion.div>
         )}
 
         {roots.map(node => (
@@ -295,19 +399,21 @@ const FileExplorer = ({
             onCreateNode={onFileCreate}
             onTriggerRename={setRenamingId}
             renamingId={renamingId}
+            searchQuery={searchQuery}
           />
         ))}
       </div>
 
-      {isModalOpen && (
-        <OpenFolderModal
-          onClose={() => setIsModalOpen(false)}
-          onOpenPath={(path, clear) => onSyncProject(path, clear)}
-        />
-      )}
+      <AnimatePresence>
+        {isModalOpen && (
+          <OpenFolderModal
+            onClose={() => setIsModalOpen(false)}
+            onOpenPath={(path, clear) => onSyncProject(path, clear)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
-
 
 export default FileExplorer;

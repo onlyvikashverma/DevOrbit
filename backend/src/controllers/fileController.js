@@ -8,6 +8,28 @@ import { execSync } from 'child_process';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+/**
+ * Resolves special system keywords to absolute paths
+ */
+const resolveSpecialPath = (targetPath) => {
+  console.log(`[DEBUG] Resolving path: "${targetPath}"`);
+  if (!targetPath) return os.homedir();
+  if (['Desktop', 'Documents', 'Downloads'].includes(targetPath)) {
+    const resolved = path.join(os.homedir(), targetPath);
+    console.log(`[DEBUG] Keyword match! Resolved to: "${resolved}"`);
+    return resolved;
+  }
+  
+  // On Windows, treat "C:\" as an absolute path
+  if (process.platform === 'win32' && /^[a-zA-Z]:[\\/]?/.test(targetPath)) {
+    return path.normalize(targetPath);
+  }
+
+  const resolved = path.resolve(targetPath);
+  console.log(`[DEBUG] Resolved to: "${resolved}"`);
+  return resolved;
+};
+
 export const getFiles = async (req, res) => {
   try {
     const rawFiles = await File.find({});
@@ -78,12 +100,12 @@ export const updateFileContent = async (req, res) => {
 export const syncLocalFiles = async (req, res) => {
   try {
     const { customPath, clearExisting } = req.body;
+    console.log(`[DEBUG] Sync Request - path: "${customPath}", clear: ${clearExisting}`);
     
-    // Default to project root if no custom path provided
-    let rootPath = customPath || path.join(__dirname, '../../../');
+    // Resolve path using special keywords or absolute
+    let rootPath = resolveSpecialPath(customPath);
     
-    // Normalize path and check existence
-    rootPath = path.resolve(rootPath);
+    // Check existence
     if (!fs.existsSync(rootPath) || !fs.statSync(rootPath).isDirectory()) {
       return res.status(400).json({ error: 'Invalid directory path provided' });
     }
@@ -93,36 +115,50 @@ export const syncLocalFiles = async (req, res) => {
       await File.deleteMany({});
     }
 
-    const EXCLUDE = ['node_modules', '.git', 'dist', 'build', '.gemini', '.next', '.DS_Store'];
+    const EXCLUDE = ['node_modules', '.git', 'dist', 'build', '.gemini', '.next', '.DS_Store', 'System Volume Information', '$RECYCLE.BIN'];
+    let totalFiles = 0;
+    const MAX_FILES = 1000;
 
     const scan = async (dir, parentId = null) => {
-      const items = fs.readdirSync(dir);
-      for (const item of items) {
-        if (EXCLUDE.includes(item)) continue;
-        const fullPath = path.join(dir, item);
-        const stats = fs.statSync(fullPath);
-        const type = stats.isDirectory() ? 'folder' : 'file';
-
-        let dbNode = await File.findOne({ name: item, parentId, type });
-        if (!dbNode) {
-          let content = '';
-          if (type === 'file') {
-            try { content = fs.readFileSync(fullPath, 'utf8'); } catch(e) {}
-          }
-          dbNode = new File({ name: item, type, parentId, content });
-          await dbNode.save();
-        } else if (type === 'file') {
-          // Update content if changed
+      if (totalFiles > MAX_FILES) return;
+      
+      try {
+        const items = fs.readdirSync(dir);
+        for (const item of items) {
+          if (EXCLUDE.includes(item)) continue;
+          const fullPath = path.join(dir, item);
+          
           try {
-            const diskContent = fs.readFileSync(fullPath, 'utf8');
-            if (dbNode.content !== diskContent) {
-              dbNode.content = diskContent;
+            const stats = fs.statSync(fullPath);
+            const type = stats.isDirectory() ? 'folder' : 'file';
+            totalFiles++;
+
+            let dbNode = await File.findOne({ name: item, parentId, type });
+            if (!dbNode) {
+              let content = '';
+              if (type === 'file') {
+                try { content = fs.readFileSync(fullPath, 'utf8'); } catch(e) {}
+              }
+              dbNode = new File({ name: item, type, parentId, content });
               await dbNode.save();
+            } else if (type === 'file') {
+              // Update content if changed
+              try {
+                const diskContent = fs.readFileSync(fullPath, 'utf8');
+                if (dbNode.content !== diskContent) {
+                  dbNode.content = diskContent;
+                  await dbNode.save();
+                }
+              } catch(e) {}
             }
-          } catch(e) {}
+            
+            if (type === 'folder') await scan(fullPath, dbNode._id);
+          } catch (statError) {
+            continue; // Skip inaccessible nodes
+          }
         }
-        
-        if (type === 'folder') await scan(fullPath, dbNode._id);
+      } catch (readdirError) {
+        console.log(`[DEBUG] Skipping restricted directory: ${dir}`);
       }
     };
 
@@ -142,33 +178,28 @@ export const browseSystem = async (req, res) => {
   try {
     let { targetPath } = req.body;
 
-    // Handle initial state (no path provided)
-    if (!targetPath) {
-      if (process.platform === 'win32') {
-        // List Windows drives
-        try {
-          const drivesRaw = execSync('wmic logicaldisk get name').toString();
-          const drives = drivesRaw.split('\r\r\n')
-            .filter(line => line.includes(':'))
-            .map(line => ({
-              name: line.trim(),
-              type: 'drive',
-              path: line.trim() + '\\'
-            }));
-          return res.status(200).json({ 
-            currentPath: 'drives',
-            contents: drives,
-            isRoot: true 
-          });
-        } catch (e) {
-          targetPath = os.homedir(); // Fallback to homedir if wmic fails
-        }
-      } else {
-        targetPath = '/';
+    // Handle Windows drives separately if no path
+    if (!targetPath && process.platform === 'win32') {
+      try {
+        const drivesRaw = execSync('wmic logicaldisk get name').toString();
+        const drives = drivesRaw.split('\r\r\n')
+          .filter(line => line.includes(':'))
+          .map(line => ({
+            name: line.trim(),
+            type: 'drive',
+            path: line.trim() + '\\'
+          }));
+        return res.status(200).json({ 
+          currentPath: 'drives',
+          contents: drives,
+          isRoot: true 
+        });
+      } catch (e) {
+        targetPath = 'Desktop'; // Fallback
       }
     }
 
-    const fullPath = path.resolve(targetPath);
+    const fullPath = resolveSpecialPath(targetPath);
     
     if (!fs.existsSync(fullPath)) {
       return res.status(404).json({ error: 'Path does not exist' });

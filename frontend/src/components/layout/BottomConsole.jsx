@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Terminal, Play, XCircle, Copy, ChevronUp, ChevronDown, CheckCheck, Clock } from 'lucide-react';
+import { Terminal, Play, XCircle, Copy, ChevronUp, ChevronDown, CheckCheck, Clock, Code } from 'lucide-react';
+import TerminalContainer from './TerminalContainer';
 import './BottomConsole.css';
 
-const BottomConsole = ({ logs, onClear, lastExecTime }) => {
+const BottomConsole = ({ logs, onClear, lastExecTime, stdin, onStdinChange }) => {
   const [height, setHeight] = useState(240);
   const [isResizing, setIsResizing] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -64,6 +65,12 @@ const BottomConsole = ({ logs, onClear, lastExecTime }) => {
             <Play size={13} /> Output
           </button>
           <button
+            className={`console-tab ${activeTab === 'input' ? 'active' : ''}`}
+            onClick={() => setActiveTab('input')}
+          >
+            <Code size={13} /> Input
+          </button>
+          <button
             className={`console-tab ${activeTab === 'terminal' ? 'active' : ''}`}
             onClick={() => setActiveTab('terminal')}
           >
@@ -102,20 +109,39 @@ const BottomConsole = ({ logs, onClear, lastExecTime }) => {
       </div>
 
       {/* Body */}
-      <div className="console-body" ref={bodyRef}>
-        {logs.length === 0 ? (
-          <div className="console-empty">
-            <Terminal size={20} style={{ opacity: 0.2, marginBottom: '0.4rem' }} />
-            <span>DevOrbit sandbox ready. Run your code to see output.</span>
+      <div className="console-body custom-scrollbar" ref={bodyRef}>
+        {activeTab === 'output' ? (
+          logs.length === 0 ? (
+            <div className="console-empty">
+              <Terminal size={20} style={{ opacity: 0.2, marginBottom: '0.4rem' }} />
+              <span>DevOrbit sandbox ready. Run your code to see output.</span>
+            </div>
+          ) : (
+            logs.map((log, i) => (
+              <div key={i} className={`log-line log-${log.type} animate-slide-up`}>
+                <span className="log-prefix">{log.type === 'error' ? '✗' : '›'}</span>
+                <span className="log-message">{log.message}</span>
+                {log.time && <span className="log-time">{log.time}ms</span>}
+              </div>
+            ))
+          )
+        ) : activeTab === 'input' ? (
+          <div className="stdin-container animate-fade-in">
+            <div className="stdin-header">
+              <span className="stdin-info">Provide Standard Input (stdin) for the next execution:</span>
+              <button className="clear-stdin-btn" onClick={() => onStdinChange('')} disabled={!stdin}>
+                Clear Input
+              </button>
+            </div>
+            <textarea
+              className="stdin-textarea"
+              placeholder="Type input here... (e.g. your name, numbers, etc.)"
+              value={stdin}
+              onChange={(e) => onStdinChange(e.target.value)}
+            />
           </div>
         ) : (
-          logs.map((log, i) => (
-            <div key={i} className={`log-line log-${log.type} animate-slide-up`}>
-              <span className="log-prefix">{log.type === 'error' ? '✗' : '›'}</span>
-              <span className="log-message">{log.message}</span>
-              {log.time && <span className="log-time">{log.time}ms</span>}
-            </div>
-          ))
+           <TerminalContainer />
         )}
       </div>
     </div>

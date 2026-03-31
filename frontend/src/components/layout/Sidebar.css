@@ -81,8 +81,31 @@
 
 .icon-btn.active {
   color: var(--accent-neon-blue);
-  background: rgba(56, 189, 248, 0.1);
-  box-shadow: 0 0 14px rgba(56, 189, 248, 0.2);
+  background: rgba(56, 189, 248, 0.12);
+  box-shadow: 
+    0 0 20px rgba(56, 189, 248, 0.2),
+    inset 0 0 12px rgba(56, 189, 248, 0.1);
+}
+
+/* ─── Neural Track ─── */
+.icon-btn::after {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 50%;
+  height: 0;
+  width: 4px;
+  background: var(--accent-neon-blue);
+  box-shadow: 0 0 12px var(--accent-neon-blue);
+  border-radius: 0 4px 4px 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateY(-50%);
+  opacity: 0;
+}
+
+.icon-btn.active::after {
+  height: 50%;
+  opacity: 1;
 }
 
 /* ─── Tooltip ─── */

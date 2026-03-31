@@ -2,7 +2,10 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 import { X, Code, Zap, FileCode, Coffee, Globe, Terminal, Cpu } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { socket } from '../../services/socket';
+import ProjectDashboard from '../dashboard/ProjectDashboard';
 import './MonacoWorkspace.css';
+import './Collaboration.css';
 
 const SUPPORTED_LANGUAGES = [
   { id: 'javascript', label: 'JavaScript', ext: 'js',   icon: '⚡', color: '#fbbf24' },
@@ -19,38 +22,20 @@ const QUICK_ACTIONS = [
   { icon: <Terminal size={20} />, label: 'New C++ File',    action: 'new-cpp'  },
 ];
 
-// ─── Welcome Screen ───────────────────────────────────────────────────────────
-const WelcomeScreen = ({ onQuickAction }) => (
-  <div className="welcome-screen glass-panel-inner">
-    <div className="welcome-logo animate-float">
-      <Zap size={40} strokeWidth={1.5} />
-    </div>
-    <h2 className="welcome-title text-gradient">DevOrbit IDE</h2>
-    <p className="welcome-sub text-secondary">Select a file or start with a quick action</p>
-    <div className="welcome-actions">
-      {QUICK_ACTIONS.map(qa => (
-        <button key={qa.action} className="quick-action-btn" onClick={() => onQuickAction?.(qa.action)}>
-          <span className="quick-action-icon">{qa.icon}</span>
-          <span>{qa.label}</span>
-        </button>
-      ))}
-    </div>
-    <div className="welcome-shortcuts">
-      <div className="shortcut-item"><kbd>Ctrl+Enter</kbd> Run Code</div>
-      <div className="shortcut-item"><kbd>Ctrl+S</kbd> Save</div>
-      <div className="shortcut-item"><kbd>Ctrl+`</kbd> Terminal</div>
-    </div>
-  </div>
-);
+// ─── Welcome Wrapper ────────────────────────────────────────────────────────
+// (Old WelcomeScreen removed in favor of ProjectDashboard)
 
 // ─── MonacoWorkspace ──────────────────────────────────────────────────────────
 const MonacoWorkspace = ({
-  currentFile, openFiles, onCodeChange, onTabSelect, onTabClose, onLanguageChange, onQuickAction
+  currentFile, openFiles, onCodeChange, onTabSelect, onTabClose, onLanguageChange, onQuickAction,
+  activities, files
 }) => {
   const editorRef = useRef(null);
   const { fontSize, wordWrap, minimapEnabled, tabSize, lineNumbers } = useSettingsStore();
   const [cursor, setCursor] = useState({ line: 1, col: 1 });
   const [modifiedIds, setModifiedIds] = useState(new Set());
+  const remoteCursorsRef = useRef({}); // { socketId: [decorationIds] }
+  const monacoRef = useRef(null);
 
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
@@ -86,12 +71,99 @@ const MonacoWorkspace = ({
         'scrollbarSlider.hoverBackground':   '#ffffff20',
       }
     });
+    monacoRef.current = monaco;
     monaco.editor.setTheme('devorbit-dark');
 
     editor.onDidChangeCursorPosition(e => {
-      setCursor({ line: e.position.lineNumber, col: e.position.column });
+      const pos = { line: e.position.lineNumber, col: e.position.column };
+      setCursor(pos);
+
+      // Emit cursor move to backend
+      if (currentFile?.id) {
+        socket.emit('cursor-move', {
+          fileId: currentFile.id,
+          cursor: pos
+        });
+      }
     });
   };
+
+  // ─── Remote Cursors Logic ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!editorRef.current || !monacoRef.current || !currentFile) return;
+
+    const onRemoteCursor = (data) => {
+      // Only show if on the same file and not ourselves
+      if (data.fileId !== currentFile.id || data.id === socket.id) {
+        // If they were on this file but moved away, clear their decoration
+        if (remoteCursorsRef.current[data.id]) {
+          editorRef.current.deltaDecorations(remoteCursorsRef.current[data.id], []);
+          delete remoteCursorsRef.current[data.id];
+        }
+        return;
+      }
+
+      const { id, userName, userColor, cursor: remotePos } = data;
+
+      // Create new decoration
+      const newDecorations = [
+        // The Cursor Line
+        {
+          range: new monacoRef.current.Range(remotePos.line, remotePos.col, remotePos.line, remotePos.col + 1),
+          options: {
+            className: 'remote-cursor',
+            beforeContentClassName: `remote-cursor-label-${id}`, // We'll inject dynamic CSS for color
+          }
+        }
+      ];
+
+      // Inject dynamic CSS for this user's color if needed
+      let styleTag = document.getElementById(`cursor-style-${id}`);
+      if (!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.id = `cursor-style-${id}`;
+        document.head.appendChild(styleTag);
+      }
+      styleTag.innerHTML = `
+        .remote-cursor-label-${id}::after { 
+          content: "${userName}";
+          background-color: ${userColor};
+          position: absolute;
+          top: -20px;
+          left: 0;
+          padding: 2px 6px;
+          color: white;
+          font-size: 10px;
+          font-weight: 600;
+          white-space: nowrap;
+          border-radius: 4px;
+          opacity: 0.9;
+          pointer-events: none;
+        }
+        .remote-cursor { border-left: 2px solid ${userColor}; shadow: 0 0 5px ${userColor}; }
+      `;
+
+      // Apply decoration
+      const oldDecorations = remoteCursorsRef.current[id] || [];
+      remoteCursorsRef.current[id] = editorRef.current.deltaDecorations(oldDecorations, newDecorations);
+    };
+
+    socket.on('remote-cursor-move', onRemoteCursor);
+
+    // Cleanup on unmount or file change
+    return () => {
+      socket.off('remote-cursor-move', onRemoteCursor);
+      // Clear all remote cursors when switching files
+      Object.keys(remoteCursorsRef.current).forEach(id => {
+        if (editorRef.current) {
+          editorRef.current.deltaDecorations(remoteCursorsRef.current[id], []);
+        }
+        const styleTag = document.getElementById(`cursor-style-${id}`);
+        if (styleTag) styleTag.remove();
+      });
+      remoteCursorsRef.current = {};
+    };
+  }, [currentFile?.id]);
 
   const handleCodeChange = (value) => {
     if (!currentFile) return;
@@ -109,7 +181,7 @@ const MonacoWorkspace = ({
   const detectedLang = SUPPORTED_LANGUAGES.find(l => l.ext === currentExt) || SUPPORTED_LANGUAGES[0];
 
   if (!currentFile) {
-    return <WelcomeScreen onQuickAction={onQuickAction} />;
+    return <ProjectDashboard files={files} activities={activities} onQuickAction={onQuickAction} />;
   }
 
   return (

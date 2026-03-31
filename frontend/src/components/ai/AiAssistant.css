@@ -1,0 +1,286 @@
+.ai-assistant-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 380px;
+    height: 100vh;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    background: rgba(10, 14, 26, 0.7);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: -20px 0 50px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+/* Header */
+.ai-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.ai-brand {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.ai-icon-glow {
+    width: 40px;
+    height: 40px;
+    background: rgba(56, 189, 248, 0.1);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+}
+
+.neon-icon {
+    color: var(--accent-neon-blue);
+    filter: drop-shadow(0 0 5px var(--accent-neon-blue));
+}
+
+.ai-status {
+    display: flex;
+    flex-direction: column;
+}
+
+.ai-name {
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: var(--text-main);
+}
+
+.ai-active-info {
+    font-size: 0.7rem;
+    color: var(--accent-neon-blue);
+    font-family: 'JetBrains Mono', monospace;
+    opacity: 0.8;
+}
+
+.close-ai-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0.5rem;
+    border-radius: 50%;
+}
+
+.close-ai-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #f87171;
+    transform: rotate(90deg);
+}
+
+/* Quick Actions Chips */
+.ai-quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 1rem 1.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ai-chip-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+    padding: 0.4rem 0.75rem;
+    border-radius: 99px;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ai-chip-btn:hover {
+    background: rgba(56, 189, 248, 0.1);
+    border-color: rgba(56, 189, 248, 0.3);
+    color: var(--accent-neon-blue);
+    transform: translateY(-1px);
+}
+
+/* Chat Body */
+.ai-chat-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.ai-message-row {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.ai-message-row.user {
+    flex-direction: row-reverse;
+}
+
+.ai-avatar-msg {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+}
+
+.ai-bubble {
+    max-width: 85%;
+    padding: 0.8rem 1rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    position: relative;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ai-bubble.assistant {
+    border-top-left-radius: 2px;
+    background: rgba(56, 189, 248, 0.05);
+    border-color: rgba(56, 189, 248, 0.1);
+}
+
+.ai-bubble.user {
+    border-top-right-radius: 2px;
+    background: rgba(167, 139, 250, 0.05);
+    border-color: rgba(167, 139, 250, 0.1);
+}
+
+.neon-text {
+    color: var(--accent-neon-blue);
+    text-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+}
+
+/* Typing Hologram */
+.typing-indicator-hologram {
+    display: flex;
+    gap: 5px;
+    padding: 0.2rem;
+}
+
+.typing-indicator-hologram span {
+    width: 6px;
+    height: 6px;
+    background: var(--accent-neon-blue);
+    border-radius: 50%;
+    animation: hologram-pulse 1.2s infinite ease-in-out;
+}
+
+.typing-indicator-hologram span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator-hologram span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes hologram-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.3; }
+    50% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 10px var(--accent-neon-blue); }
+}
+
+/* Input Area */
+.ai-input-wrapper {
+    padding: 1.5rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ai-input-box {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    background: rgba(10, 14, 26, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.3s ease;
+}
+
+.ai-input-box:focus-within {
+    border-color: var(--accent-neon-blue);
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+}
+
+.ai-spark-icon {
+    color: var(--accent-neon-blue);
+    filter: drop-shadow(0 0 4px var(--accent-neon-blue));
+}
+
+.ai-textarea {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-main);
+    font-size: 0.85rem;
+    font-family: inherit;
+    resize: none;
+    height: 24px;
+}
+
+.ai-send-btn {
+    background: none;
+    border: none;
+    color: var(--accent-neon-blue);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ai-send-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.ai-send-btn:hover:not(:disabled) {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 5px var(--accent-neon-blue));
+}
+
+.ai-footer-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 0.8rem;
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    letter-spacing: 0.15em;
+}
+
+/* Neural Background Particles */
+.neural-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+    overflow: hidden;
+    opacity: 0.05;
+}
+
+.grid-overlay {
+    width: 100%;
+    height: 100%;
+    background-image: linear-gradient(rgba(56, 189, 248, 0.1) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(56, 189, 248, 0.1) 1px, transparent 1px);
+    background-size: 30px 30px;
+}

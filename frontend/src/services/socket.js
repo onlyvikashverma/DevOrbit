@@ -7,10 +7,11 @@ export const socket = io(SOCKET_URL, {
   reconnection: true
 });
 
-export const connectSocket = (token) => {
+export const connectSocket = (token, query = {}) => {
   if (token) {
     socket.auth = { token };
   }
+  socket.io.opts.query = query;
   socket.connect();
 };
 

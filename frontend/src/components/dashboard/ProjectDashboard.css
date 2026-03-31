@@ -1,0 +1,133 @@
+.project-dashboard-simple {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start; /* Start from top to handle overflow */
+  overflow-y: auto;
+  position: relative;
+  padding: 1.5rem 1rem; /* Reduced padding */
+  height: 100%;
+}
+
+.dashboard-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem; /* Further reduced gap */
+  z-index: 10;
+  text-align: center;
+  max-width: 100%;
+  margin: auto 0; /* Centering trick that plays nice with overflow */
+}
+
+/* ─── Logo Section ─── */
+.logo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.main-logo-circle {
+  width: 56px; /* Smaller logo */
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(139, 92, 246, 0.2));
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.15), inset 0 0 10px rgba(56, 189, 248, 0.1);
+  margin-bottom: 0.2rem;
+}
+
+.dashboard-title {
+  font-size: 1.5rem; /* Smaller title */
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent-neon-blue), var(--accent-neon-purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0;
+}
+
+.dashboard-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ─── Actions Grid ─── */
+.simple-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 480px;
+}
+
+.simple-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 1.25rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  color: var(--text-main);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  text-align: left;
+}
+
+.simple-action-btn:hover {
+  background: rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.btn-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.btn-label {
+  color: var(--text-main);
+  font-size: 0.82rem;
+}
+
+/* ─── Shortcuts Row ─── */
+.shortcuts-row {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.shortcut-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.kdb-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.72rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+}
+
+.shortcut-action {
+  color: var(--text-muted);
+  opacity: 0.7;
+}

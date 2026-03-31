@@ -73,11 +73,29 @@ body {
   min-height: 100vh;
   overflow: hidden;
   background:
-    radial-gradient(ellipse at 5% 20%, rgba(56, 189, 248, 0.12) 0%, transparent 45%),
-    radial-gradient(ellipse at 95% 10%, rgba(192, 132, 252, 0.12) 0%, transparent 45%),
-    radial-gradient(ellipse at 50% 90%, rgba(244, 114, 182, 0.06) 0%, transparent 50%),
+    radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.15) 0%, transparent 35%),
+    radial-gradient(circle at 85% 85%, rgba(192, 132, 252, 0.15) 0%, transparent 35%),
     var(--bg-deep);
-  background-attachment: fixed;
+  background-size: 200% 200%;
+  animation: backgroundPulse 15s ease infinite;
+  position: relative;
+}
+
+/* ─── 3D Perspective Grid ─── */
+body::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  mask-image: radial-gradient(ellipse at 50% 50%, black 20%, transparent 80%);
+  transform: perspective(1000px) rotateX(60deg) translateY(-200px) scale(3);
+  transform-origin: top;
+  z-index: -1;
+  opacity: 0.4;
+  animation: gridMove 20s linear infinite;
 }
 
 /* ─── Custom Scrollbar ─── */
@@ -91,26 +109,30 @@ body {
 
 /* ─── Glassmorphism Panels ─── */
 .glass-panel {
-  background: var(--panel-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-subtle);
+  background: rgba(10, 14, 26, 0.65);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-lg);
-  padding: 2rem;
-  box-shadow: var(--shadow-panel);
-  transition: var(--transition-smooth);
+  box-shadow: 
+    0 24px 64px rgba(0, 0, 0, 0.6),
+    inset 0 0 32px rgba(255, 255, 255, 0.015);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-panel:hover {
-  border-color: var(--border-glow);
-  box-shadow: var(--shadow-glow-blue);
+  border-color: rgba(56, 189, 248, 0.3);
+  background: rgba(10, 14, 26, 0.7);
+  box-shadow: 
+    0 12px 48px rgba(0, 0, 0, 0.6),
+    0 0 20px rgba(56, 189, 248, 0.15);
 }
 
 .glass-panel-inner {
-  background: rgba(255, 255, 255, 0.018);
-  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-md);
-  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(8px);
 }
 
 /* ─── Typography ─── */
@@ -298,16 +320,31 @@ h2 { font-size: 1.5rem; letter-spacing: -0.02em; font-weight: 600; }
   50%       { opacity: 0; }
 }
 
-@keyframes gradientShift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+@keyframes backgroundPulse {
+  0%, 100% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+}
+
+@keyframes scanline {
+  0% { top: -100%; }
+  100% { top: 100%; }
+}
+
+@keyframes pulseBorder {
+  0%, 100% { border-color: rgba(56, 189, 248, 0.2); }
+  50% { border-color: rgba(56, 189, 248, 0.5); }
+}
+
+@keyframes gridMove {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 50px; }
 }
 
 /* ─── Utility ─── */
-.animate-fade-in   { animation: fadeIn 0.25s ease forwards; }
-.animate-slide-up  { animation: slideInUp 0.25s ease forwards; }
-.animate-float     { animation: float 3s ease-in-out infinite; }
+.animate-fade-in   { animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.animate-slide-up  { animation: slideInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.animate-float     { animation: float 4s ease-in-out infinite; }
+.animate-pulse-border { animation: pulseBorder 3s ease-in-out infinite; }
 
 .column-layout {
   display: flex;

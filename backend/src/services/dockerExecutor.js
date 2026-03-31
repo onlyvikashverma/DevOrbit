@@ -1,5 +1,5 @@
 // Using Judge0 CE API for reliable, non-whitelisted execution
-export const executeCode = async (language, content) => {
+export const executeCode = async (language, content, stdin = '') => {
   let languageId = 93; // Default to Node.js 18.15.0
 
   switch(language) {
@@ -29,7 +29,7 @@ export const executeCode = async (language, content) => {
       body: JSON.stringify({
         source_code: content,
         language_id: languageId,
-        stdin: ''
+        stdin: stdin
       })
     });
 
