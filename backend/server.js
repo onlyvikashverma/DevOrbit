@@ -81,17 +81,34 @@ io.on('connection', (socket) => {
   // Broadcast the updated user list to everyone
   io.emit('presence-update', Array.from(onlineUsers.values()));
 
-  // Persistent shell for terminal
-  const shell = spawn('powershell.exe', ['-NoExit', '-Command', '-'], {
-    stdio: ['pipe', 'pipe', 'pipe'],
-    env: process.env
-  });
+  // Persistent shell for terminal (Platform independent)
+  const isWindows = process.platform === 'win32';
+  const shellCommand = isWindows ? 'powershell.exe' : 'bash';
+  const shellArgs = isWindows ? ['-NoExit', '-Command', '-'] : [];
 
-  shell.stdout.on('data', (data) => socket.emit('terminal-output', data.toString()));
-  shell.stderr.on('data', (data) => socket.emit('terminal-output', `[ERR] ${data.toString()}`));
+  let shell;
+  try {
+    shell = spawn(shellCommand, shellArgs, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: process.env,
+      shell: isWindows // Fix ENOENT on Windows by wrapping in cmd.exe
+    });
+
+    shell.stdout.on('data', (data) => socket.emit('terminal-output', data.toString()));
+    shell.stderr.on('data', (data) => socket.emit('terminal-output', `[ERR] ${data.toString()}`));
+
+    shell.on('error', (err) => {
+      console.error('Failed to spawn shell:', err);
+      socket.emit('terminal-output', `\r\n[SYSTEM] Failed to start terminal: ${err.message}\r\n`);
+    });
+
+  } catch (err) {
+    console.error('Synchronous error spawning shell:', err);
+    socket.emit('terminal-output', `\r\n[SYSTEM] Failed to start terminal: ${err.message}\r\n`);
+  }
 
   socket.on('terminal-input', (data) => {
-    if (shell.stdin.writable) shell.stdin.write(data);
+    if (shell && shell.stdin && shell.stdin.writable) shell.stdin.write(data);
   });
 
   // --- Collaboration Events ---
@@ -119,7 +136,14 @@ io.on('connection', (socket) => {
     console.log('Client disconnected:', socket.id);
     onlineUsers.delete(socket.id);
     io.emit('presence-update', Array.from(onlineUsers.values()));
-    shell.kill();
+    
+    if (shell) {
+      try {
+        shell.kill();
+      } catch (err) {
+        console.error('Error killing shell on disconnect:', err.message);
+      }
+    }
   });
 });
 
