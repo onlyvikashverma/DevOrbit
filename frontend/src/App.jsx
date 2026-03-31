@@ -295,7 +295,7 @@ function App() {
     setLogs(prev => [...prev, { type: 'info', message: `▶ Running ${currentFile.name}...` }]);
 
     try {
-      const res = await fetch(`${BACKEND_URL}/execute`, {
+      const res = await fetch(`${BACKEND_URL}/api/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ language, content: currentFile.content, stdin })
