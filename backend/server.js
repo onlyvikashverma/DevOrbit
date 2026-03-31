@@ -25,33 +25,35 @@ const allowedOrigins = process.env.FRONTEND_URL
   ? process.env.FRONTEND_URL.split(',').map(url => url.trim()) 
   : ['http://localhost:5173'];
 
-app.use(cors({
+// Reusable CORS check function
+const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
     // Check if origin matches allowed list or is a Vercel subdomain for this project
-    const isVercelSubdomain = origin.includes('onlyvikashvermas-projects.vercel.app');
+    const isVercelSubdomain = 
+      origin.includes('onlyvikashvermas-projects.vercel.app') || 
+      origin.includes('devorbit-one.vercel.app') ||
+      origin.includes('devorbit.vercel.app');
     
     if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*') || isVercelSubdomain) {
       callback(null, true);
     } else {
+      console.warn(`Blocked by CORS: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
-}));
+};
 
+app.use(cors(corsOptions));
 app.use(express.json());
 
-// Initialize Socket.io
+// Initialize Socket.io with the same CORS options
 const io = new Server(server, {
-  cors: {
-    origin: allowedOrigins,
-    methods: ['GET', 'POST'],
-    credentials: true
-  }
+  cors: corsOptions
 });
 
 io.on('connection', (socket) => {
