@@ -4,7 +4,7 @@ import TerminalContainer from './TerminalContainer';
 import './BottomConsole.css';
 
 const BottomConsole = ({ logs, onClear, lastExecTime, stdin, onStdinChange }) => {
-  const [height, setHeight] = useState(240);
+  const [height, setHeight] = useState(120);
   const [isResizing, setIsResizing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState('output');
@@ -30,7 +30,7 @@ const BottomConsole = ({ logs, onClear, lastExecTime, stdin, onStdinChange }) =>
     if (!isResizing) return;
     const onMove = (e) => {
       const delta = startY.current - e.clientY;
-      const newH = Math.min(500, Math.max(100, startH.current + delta));
+      const newH = Math.min(500, Math.max(32, startH.current + delta));
       setHeight(newH);
     };
     const onUp = () => setIsResizing(false);

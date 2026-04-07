@@ -380,6 +380,7 @@ function App() {
         onFileDelete={handleDeleteNode}
         onFileRename={handleRenameNode}
         onFileSelect={handleFileSelect}
+        onSyncProject={handleSyncProject}
         currentFileId={currentFileId}
         isSyncing={isSyncing}
       />

@@ -234,8 +234,7 @@
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   pointer-events: none;
-  z-index: 10;
-  animation: pulseBorder 4s ease-in-out infinite;
+  z-index: 1;
 }
 
 /* ─── Shared icon-btn (reused from Sidebar) ─── */

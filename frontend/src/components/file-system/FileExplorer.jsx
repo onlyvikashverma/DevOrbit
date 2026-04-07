@@ -3,7 +3,7 @@ import {
   ChevronRight, ChevronDown, File, Folder, FolderOpen,
   FilePlus, FolderPlus, Trash2, Edit2, Check, X,
   MoreVertical, FileCode, FileJson, FileText, Coffee,
-  RotateCcw, FolderSearch, Search
+  RotateCcw, FolderSearch, Search, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import OpenFolderModal from './OpenFolderModal';

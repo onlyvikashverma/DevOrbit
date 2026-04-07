@@ -110,8 +110,8 @@ body::before {
 /* ─── Glassmorphism Panels ─── */
 .glass-panel {
   background: rgba(10, 14, 26, 0.65);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  /* backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%); */
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-lg);
   box-shadow: 
@@ -132,7 +132,7 @@ body::before {
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-md);
-  backdrop-filter: blur(8px);
+  /* backdrop-filter: blur(8px); */
 }
 
 /* ─── Typography ─── */

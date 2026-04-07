@@ -7,6 +7,16 @@
   overflow: hidden;
 }
 
+/* ─── Font Lockdown ─── */
+/* Force JetBrains Mono on every single internal Monaco element to prevent 'Outfit' leak */
+.monaco-workspace *, 
+.monaco-editor, 
+.monaco-editor .view-line, 
+.monaco-editor .line-numbers {
+  font-family: 'JetBrains Mono', monospace !important;
+  line-height: inherit !important;
+}
+
 /* ─── Tab Bar ─── */
 .editor-top-bar {
   display: flex;
@@ -111,6 +121,9 @@
   border-top: none;
   border-color: rgba(56, 189, 248, 0.12);
   min-height: 0;
+  backdrop-filter: none !important; /* Critical fix for Monaco rendering glitches */
+  position: relative;
+  z-index: 1;
 }
 
 /* ─── Status Bar ─── */

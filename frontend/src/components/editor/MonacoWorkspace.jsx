@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import Editor from '@monaco-editor/react';
 import { X, Code, Zap, FileCode, Coffee, Globe, Terminal, Cpu } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -36,6 +36,38 @@ const MonacoWorkspace = ({
   const [modifiedIds, setModifiedIds] = useState(new Set());
   const remoteCursorsRef = useRef({}); // { socketId: [decorationIds] }
   const monacoRef = useRef(null);
+
+  // Memoize options to prevent unnecessary re-renders and fix ReferenceError
+  const editorOptions = useMemo(() => ({
+    minimap:                   { enabled: minimapEnabled },
+    fontSize:                  fontSize,
+    lineHeight:                22,
+    fontFamily:                "'JetBrains Mono', monospace",
+    fontLigatures:             true,
+    wordWrap:                  wordWrap,
+    tabSize:                   tabSize,
+    lineNumbers:               lineNumbers,
+    smoothScrolling:           true,
+    cursorBlinking:            'smooth',
+    cursorSmoothCaretAnimation: 'on',
+    formatOnPaste:             true,
+    formatOnType:              true,
+    padding:                   { top: 12, bottom: 12 },
+    bracketPairColorization:   { enabled: true },
+    guides: {
+      bracketPairs:            true,
+      indentation:             true,
+    },
+    renderWhitespace:          'selection',
+    scrollBeyondLastLine:      true,
+    automaticLayout:           true,
+    occurrencesHighlight:      'off',
+    selectionHighlight:        false,
+    renderLineHighlight:       'all',
+    fixedOverflowWidgets:      false,
+    hideCursorInOverviewRuler: true,
+    overviewRulerBorder:       false,
+  }), [minimapEnabled, fontSize, wordWrap, tabSize, lineNumbers]);
 
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
@@ -238,28 +270,7 @@ const MonacoWorkspace = ({
           value={currentFile.content}
           onChange={handleCodeChange}
           onMount={handleEditorDidMount}
-          options={{
-            minimap:                   { enabled: minimapEnabled },
-            fontSize:                  fontSize,
-            fontFamily:                'JetBrains Mono, Fira Code, monospace',
-            fontLigatures:             true,
-            wordWrap:                  wordWrap,
-            tabSize:                   tabSize,
-            lineNumbers:               lineNumbers,
-            smoothScrolling:           true,
-            cursorBlinking:            'smooth',
-            cursorSmoothCaretAnimation:'on',
-            formatOnPaste:             true,
-            formatOnType:              true,
-            padding:                   { top: 16, bottom: 16 },
-            bracketPairColorization:   { enabled: true },
-            guides: {
-              bracketPairs:            true,
-              indentation:             true,
-            },
-            renderWhitespace:          'selection',
-            scrollBeyondLastLine:      false,
-          }}
+          options={editorOptions}
         />
       </div>
 
