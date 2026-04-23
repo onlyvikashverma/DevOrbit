@@ -36,21 +36,28 @@ const AiAssistant = ({ isOpen, onClose, currentFile }) => {
     setInput('');
     setIsTyping(true);
 
-    // Simulate AI Processing with the current file context
-    setTimeout(() => {
-      let responseText = "";
+    try {
+      const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+      const res = await fetch(`${BACKEND_URL}/api/ai/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+           prompt: text,
+           fileContext: currentFile ? { name: currentFile.name, content: currentFile.content } : null
+        })
+      });
+      const data = await res.json();
       
-      if (text.toLowerCase().includes('refactor')) {
-        responseText = `Based on your current file **${currentFile?.name || 'Untitled'}**, I suggest extracting the logic into smaller, pure functions. This improves testability and follows the Single Responsibility Principle.`;
-      } else if (text.toLowerCase().includes('explain')) {
-        responseText = `This code appears to handle **${currentFile?.name?.split('.')[1] || 'generic'}** logic. It uses modern hooks/patterns to manage state and side effects efficiently.`;
-      } else {
-        responseText = "I've analyzed the current buffer. The implementation looks solid, but consider adding more error boundaries for production edge cases.";
+      let responseText = data.response;
+      if (!res.ok) {
+        responseText = `Error: ${data.error || 'Failed to process AI request'}`;
       }
-
       setMessages(prev => [...prev, { role: 'assistant', text: responseText }]);
+    } catch(err) {
+      setMessages(prev => [...prev, { role: 'assistant', text: `Connection Error: ${err.message}` }]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -106,10 +113,8 @@ const AiAssistant = ({ isOpen, onClose, currentFile }) => {
                    {msg.role === 'user' ? <User size={14} /> : <Bot size={14} />}
                 </div>
                 <div className={`ai-bubble ${msg.role}`}>
-                  <div className="ai-bubble-content">
-                    {msg.text.split('**').map((part, index) => 
-                      index % 2 === 1 ? <strong key={index} className="neon-text">{part}</strong> : part
-                    )}
+                  <div className="ai-bubble-content" style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                    {msg.text}
                   </div>
                 </div>
               </motion.div>

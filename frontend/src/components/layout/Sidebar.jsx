@@ -167,8 +167,7 @@ const CollabPanel = () => (
 // ─── Sidebar Root ─────────────────────────────────────────────────────────────
 const Sidebar = ({
   activePanel, setActivePanel,
-  files, onFileCreate, onFileDelete, onFileRename, onFileSelect, currentFileId,
-  onSyncProject, isSyncing
+  files, onFileCreate, onFileDelete, onFileRename, onFileSelect, currentFileId
 }) => {
   const [isOpen, setIsOpen] = useState(true);
 
@@ -227,9 +226,7 @@ const Sidebar = ({
                 onFileDelete={onFileDelete}
                 onFileRename={onFileRename}
                 onFileSelect={onFileSelect}
-                onSyncProject={onSyncProject}
                 currentFileId={currentFileId}
-                isSyncing={isSyncing}
               />
             )}
             {activePanel === 'search' && (

@@ -1,14 +1,20 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
-export const useAuthStore = create((set) => ({
-  user: null,
-  token: localStorage.getItem('devorbit_token') || null,
-  setAuth: (user, token) => {
-    localStorage.setItem('devorbit_token', token);
-    set({ user, token });
-  },
-  logout: () => {
-    localStorage.removeItem('devorbit_token');
-    set({ user: null, token: null });
-  }
-}));
+export const useAuthStore = create(
+  persist(
+    (set) => ({
+      user: null,
+      token: null,
+      setAuth: (user, token) => {
+        set({ user, token });
+      },
+      logout: () => {
+        set({ user: null, token: null });
+      }
+    }),
+    {
+      name: 'devorbit-auth',
+    }
+  )
+);

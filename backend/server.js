@@ -8,6 +8,7 @@ import { spawn } from 'child_process';
 import fileRoutes from './src/routes/fileRoutes.js';
 import executeRoutes from './src/routes/executeRoutes.js';
 import authRoutes from './src/routes/authRoutes.js';
+import aiRoutes from './src/routes/aiRoutes.js';
 
 dotenv.config();
 
@@ -40,7 +41,8 @@ const corsOptions = {
     const isVercelSubdomain = 
       origin.includes('onlyvikashvermas-projects.vercel.app') || 
       origin.includes('devorbit-one.vercel.app') ||
-      origin.includes('devorbit.vercel.app');
+      origin.includes('devorbit.vercel.app') ||
+      origin.includes('devorbitvikku.in');
     
     if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*') || isVercelSubdomain) {
       callback(null, true);
@@ -156,6 +158,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/devorbit'
 app.use('/api/auth', authRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/execute', executeRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Basic Health Route
 app.get('/api/health', (req, res) => {

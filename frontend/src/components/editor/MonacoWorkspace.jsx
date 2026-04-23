@@ -67,6 +67,7 @@ const MonacoWorkspace = ({
     fixedOverflowWidgets:      false,
     hideCursorInOverviewRuler: true,
     overviewRulerBorder:       false,
+    stickyScroll:              { enabled: false }, // Disables sticky scroll to fix UI overlapping
   }), [minimapEnabled, fontSize, wordWrap, tabSize, lineNumbers]);
 
   const handleEditorDidMount = (editor, monaco) => {

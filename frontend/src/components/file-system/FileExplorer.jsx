@@ -6,7 +6,6 @@ import {
   RotateCcw, FolderSearch, Search, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import OpenFolderModal from './OpenFolderModal';
 import './FileExplorer.css';
 
 // ─── Extension → Color & Icon mapping ───────────────────────────────────────
@@ -298,11 +297,9 @@ const FileNode = ({
 // ─── FileExplorer Root ───────────────────────────────────────────────────────
 const FileExplorer = ({
   files, onFileSelect, currentFileId, onFileCreate, onFileDelete, onFileRename,
-  onSyncProject, isSyncing
 }) => {
   const [renamingId, setRenamingId] = useState(null);
   const [inlineCreate, setInlineCreate] = useState(null); 
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const roots = useMemo(() => files.filter(f => !f.parentId), [files]);
@@ -317,17 +314,10 @@ const FileExplorer = ({
       <div className="explorer-header">
         <div className="explorer-toolbar">
           <span className="toolbar-title">
-            {isSyncing ? 'INDEXING...' : 'WORKSPACE'}
+            WORKSPACE
           </span>
-          <div className={`toolbar-actions ${isSyncing ? 'syncing' : ''}`}>
-            {isSyncing ? (
-              <RefreshCw size={14} className="animate-spin" />
-            ) : (
+          <div className="toolbar-actions">
               <>
-                <button title="Open Folder" onClick={() => setIsModalOpen(true)}>
-                  <FolderSearch size={14} />
-                </button>
-                <div className="toolbar-divider" />
                 <button title="New File" onClick={() => setInlineCreate({ type: 'file' })}>
                   <FilePlus size={18} strokeWidth={2} />
                 </button>
@@ -335,7 +325,6 @@ const FileExplorer = ({
                   <FolderPlus size={18} strokeWidth={2} />
                 </button>
               </>
-            )}
           </div>
         </div>
 
@@ -379,10 +368,7 @@ const FileExplorer = ({
               <FolderSearch size={24} />
             </div>
             <p className="empty-text">No workspace loaded</p>
-            <p className="empty-sub">Open a folder to start development</p>
-            <button className="primary-glass-btn" onClick={() => setIsModalOpen(true)}>
-              Initialize Workspace
-            </button>
+            <p className="empty-sub">Create a new file to start development</p>
           </motion.div>
         )}
 
@@ -403,15 +389,6 @@ const FileExplorer = ({
           />
         ))}
       </div>
-
-      <AnimatePresence>
-        {isModalOpen && (
-          <OpenFolderModal
-            onClose={() => setIsModalOpen(false)}
-            onOpenPath={(path, clear) => onSyncProject(path, clear)}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 };

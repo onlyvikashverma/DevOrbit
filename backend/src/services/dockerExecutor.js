@@ -18,6 +18,27 @@ export const executeCode = async (language, content, stdin = '') => {
     case 'c++': case 'cpp':
       languageId = 105; // GCC 14.1.0
       break;
+    case 'go':
+      languageId = 95; // Go 1.18.5
+      break;
+    case 'rust':
+      languageId = 73; // Rust 1.68.2
+      break;
+    case 'ruby':
+      languageId = 72; // Ruby 3.1.2
+      break;
+    case 'php':
+      languageId = 68; // PHP 8.2.3
+      break;
+    case 'bash':
+      languageId = 46; // Bash 5.2.0
+      break;
+    case 'swift':
+      languageId = 83; // Swift 5.3.3
+      break;
+    case 'typescript':
+      languageId = 74; // TypeScript 5.0.3
+      break;
     default:
       throw new Error(`Unsupported language: ${language}`);
   }

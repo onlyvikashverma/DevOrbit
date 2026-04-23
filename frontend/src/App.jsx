@@ -20,6 +20,12 @@ const BOILERPLATES = {
   c:    '#include <stdio.h>\n\nint main() {\n    printf("Hello, DevOrbit!\\n");\n    return 0;\n}\n',
   ts:   '// TypeScript Environment\nconst greet = (name: string): string => `Hello, ${name}!`;\nconsole.log(greet("DevOrbit"));\n',
   html: '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8" />\n  <title>DevOrbit</title>\n</head>\n<body>\n  <h1>Hello, DevOrbit!</h1>\n</body>\n</html>\n',
+  rb:   '# Ruby Environment\nputs "Hello, DevOrbit!"\n',
+  go:   '// Go Environment\npackage main\n\nimport "fmt"\n\nfunc main() {\n    fmt.Println("Hello, DevOrbit!")\n}\n',
+  rs:   '// Rust Environment\nfn main() {\n    println!("Hello, DevOrbit!");\n}\n',
+  php:  '<?php\n// PHP Environment\necho "Hello, DevOrbit!";\n?>\n',
+  sh:   '#!/bin/bash\n# Bash Environment\necho "Hello, DevOrbit!"\n',
+  swift:'// Swift Environment\nprint("Hello, DevOrbit!")\n',
 };
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
@@ -31,7 +37,6 @@ function App() {
   const [openFileIds, setOpenFileIds] = useState([]);
   const [currentFileId, setCurrentFileId] = useState(null);
   const [logs, setLogs] = useState([]);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [connected, setConnected] = useState(false);
   const [clock, setClock] = useState('');
@@ -234,32 +239,6 @@ function App() {
     } catch (e) { console.error('Language change failed'); }
   }, [files]);
 
-  // ─── Sync Local Files ─────────────────────────────────────────────────────
-  const handleSyncProject = useCallback(async (customPath = null, clearExisting = false) => {
-    setIsSyncing(true);
-    toast.info(customPath ? `Indexing ${customPath}...` : 'Scanning workspace...');
-    try {
-      const resp = await fetch(`${API_URL}/sync`, { 
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customPath, clearExisting })
-      });
-      
-      const resData = await resp.json();
-      if (!resp.ok) throw new Error(resData.error || 'Sync failed');
-      
-      const res = await fetch(API_URL);
-      const data = await res.json();
-      setFiles(data);
-      toast.success('Workspace Synced');
-    } catch (e) {
-      toast.error(e.message || 'Sync failed. Is the backend running?'); 
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [toast]);
-
-
   // ─── Tab management ───────────────────────────────────────────────────────
   const handleFileSelect = (node) => {
     if (node.type === 'file') {
@@ -278,7 +257,11 @@ function App() {
 
   // ─── Quick action (from welcome screen) ──────────────────────────────────
   const handleQuickAction = (action) => {
-    const map = { 'new-js': 'main.js', 'new-py': 'main.py', 'new-java': 'Main.java', 'new-cpp': 'main.cpp' };
+    const map = { 
+      'new-js': 'main.js', 'new-py': 'main.py', 'new-java': 'Main.java', 'new-cpp': 'main.cpp',
+      'new-go': 'main.go', 'new-rs': 'main.rs', 'new-rb': 'main.rb', 'new-php': 'main.php',
+      'new-sh': 'script.sh', 'new-swift': 'main.swift'
+    };
     if (map[action]) handleCreateNode(map[action], 'file', null);
   };
 
@@ -289,7 +272,7 @@ function App() {
     const startTime = Date.now();
 
     const ext = currentFile.name.split('.').pop();
-    const langMap = { py: 'python', java: 'java', cpp: 'cpp', c: 'c', js: 'javascript' };
+    const langMap = { py: 'python', java: 'java', cpp: 'cpp', c: 'c', js: 'javascript', rb: 'ruby', go: 'go', rs: 'rust', php: 'php', sh: 'bash', swift: 'swift', ts: 'typescript' };
     const language = langMap[ext] || 'javascript';
 
     setLogs(prev => [...prev, { type: 'info', message: `▶ Running ${currentFile.name}...` }]);
@@ -380,9 +363,7 @@ function App() {
         onFileDelete={handleDeleteNode}
         onFileRename={handleRenameNode}
         onFileSelect={handleFileSelect}
-        onSyncProject={handleSyncProject}
         currentFileId={currentFileId}
-        isSyncing={isSyncing}
       />
 
       <div className="main-content">
@@ -515,6 +496,12 @@ function App() {
           { id: 'toggle-ai', label: 'Toggle AI Assistant', action: () => setShowAiAssistant(!showAiAssistant) },
           { id: 'new-js', label: 'New JavaScript File', action: () => handleQuickAction('new-js') },
           { id: 'new-py', label: 'New Python File', action: () => handleQuickAction('new-py') },
+          { id: 'new-go', label: 'New Go File', action: () => handleQuickAction('new-go') },
+          { id: 'new-rs', label: 'New Rust File', action: () => handleQuickAction('new-rs') },
+          { id: 'new-rb', label: 'New Ruby File', action: () => handleQuickAction('new-rb') },
+          { id: 'new-php', label: 'New PHP File', action: () => handleQuickAction('new-php') },
+          { id: 'new-sh', label: 'New Bash Script', action: () => handleQuickAction('new-sh') },
+          { id: 'new-swift', label: 'New Swift File', action: () => handleQuickAction('new-swift') },
         ]}
       />
 
