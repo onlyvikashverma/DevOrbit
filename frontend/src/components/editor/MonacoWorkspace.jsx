@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import Editor from '@monaco-editor/react';
-import { X, Code, Zap, FileCode, Coffee, Globe, Terminal, Cpu } from 'lucide-react';
+import { X, Code, Zap, FileCode, Coffee, Globe, Terminal, Cpu, Sun, Moon } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { socket } from '../../services/socket';
 import ProjectDashboard from '../dashboard/ProjectDashboard';
@@ -34,6 +34,7 @@ const MonacoWorkspace = ({
   const { fontSize, wordWrap, minimapEnabled, tabSize, lineNumbers } = useSettingsStore();
   const [cursor, setCursor] = useState({ line: 1, col: 1 });
   const [modifiedIds, setModifiedIds] = useState(new Set());
+  const [isEditorLight, setIsEditorLight] = useState(false);
   const remoteCursorsRef = useRef({}); // { socketId: [decorationIds] }
   const monacoRef = useRef(null);
 
@@ -77,18 +78,18 @@ const MonacoWorkspace = ({
       base: 'vs-dark',
       inherit: true,
       rules: [
-        { background: '0a0e1a' },
-        { token: 'comment',   foreground: '475569', fontStyle: 'italic' },
-        { token: 'keyword',   foreground: 'c084fc', fontStyle: 'bold' },
-        { token: 'string',    foreground: '4ade80' },
-        { token: 'number',    foreground: 'fb923c' },
-        { token: 'function',  foreground: '38bdf8' },
-        { token: 'type',      foreground: 'f472b6' },
-        { token: 'variable',  foreground: 'f1f5f9' },
-        { token: 'operator',  foreground: '94a3b8' },
+        { background: '1a120b' },
+        { token: 'comment',   foreground: '8d8d8d', fontStyle: 'italic' },
+        { token: 'keyword',   foreground: 'd4a373', fontStyle: 'bold' },
+        { token: 'string',    foreground: '8b9d77' },
+        { token: 'number',    foreground: 'f4a261' },
+        { token: 'function',  foreground: 'e9c46a' },
+        { token: 'type',      foreground: 'c89f9c' },
+        { token: 'variable',  foreground: 'f4f1de' },
+        { token: 'operator',  foreground: 'b5b5b5' },
       ],
       colors: {
-        'editor.background':                 '#0a0e1a00',
+        'editor.background':                 '#1a120b',
         'editor.foreground':                 '#f1f5f9',
         'editor.lineHighlightBackground':    '#ffffff08',
         'editorLineNumber.foreground':       '#334155',
@@ -104,8 +105,31 @@ const MonacoWorkspace = ({
         'scrollbarSlider.hoverBackground':   '#ffffff20',
       }
     });
+    monaco.editor.defineTheme('devorbit-light', {
+      base: 'vs',
+      inherit: true,
+      rules: [
+        { background: 'ffffff' },
+        { token: 'comment',   foreground: '94a3b8', fontStyle: 'italic' },
+        { token: 'keyword',   foreground: '7c3aed', fontStyle: 'bold' },
+        { token: 'string',    foreground: '10b981' },
+        { token: 'number',    foreground: 'f59e0b' },
+        { token: 'function',  foreground: '0ea5e9' },
+      ],
+      colors: {
+        'editor.background':                 '#ffffff',
+        'editor.foreground':                 '#0f172a',
+        'editor.lineHighlightBackground':    '#00000008',
+        'editorLineNumber.foreground':       '#94a3b8',
+        'editorLineNumber.activeForeground': '#475569',
+        'editorIndentGuide.background':      '#e2e8f0',
+        'editorCursor.foreground':           '#7c3aed',
+        'editor.selectionBackground':        '#7c3aed20',
+      }
+    });
+
     monacoRef.current = monaco;
-    monaco.editor.setTheme('devorbit-dark');
+    monaco.editor.setTheme(isEditorLight ? 'devorbit-light' : 'devorbit-dark');
 
     editor.onDidChangeCursorPosition(e => {
       const pos = { line: e.position.lineNumber, col: e.position.column };
@@ -259,6 +283,14 @@ const MonacoWorkspace = ({
               <option key={lang.id} value={lang.id}>{lang.icon} {lang.label}</option>
             ))}
           </select>
+
+          <button 
+            className="icon-btn theme-toggle-small" 
+            onClick={() => setIsEditorLight(!isEditorLight)}
+            title="Toggle Editor Contrast"
+          >
+            {isEditorLight ? <Moon size={15} /> : <Sun size={15} />}
+          </button>
         </div>
       </div>
 
@@ -267,7 +299,7 @@ const MonacoWorkspace = ({
         <Editor
           height="100%"
           language={detectedLang.id}
-          theme="devorbit-dark"
+          theme={isEditorLight ? 'devorbit-light' : 'devorbit-dark'}
           value={currentFile.content}
           onChange={handleCodeChange}
           onMount={handleEditorDidMount}

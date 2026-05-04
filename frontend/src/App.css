@@ -29,7 +29,8 @@
   margin: 0.5rem 0;
   width: calc(100% - 1rem);
   align-self: center;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* Left */
@@ -110,7 +111,7 @@
   font-size: 0.75rem;
 }
 
-.conn-status.online  { color: var(--accent-neon-green); }
+.conn-status.online  { color: #4ade80; }
 .conn-status.offline { color: var(--text-muted); }
 
 .conn-dot {
@@ -188,25 +189,27 @@
   align-items: center;
   gap: 0.4rem;
   background: linear-gradient(135deg, #059669, #10b981);
-  border: none;
+  border: 1px solid rgba(16, 185, 129, 0.4);
   color: white;
   padding: 0.45rem 1rem;
   border-radius: var(--radius-md);
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: var(--transition-smooth);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: inherit;
   white-space: nowrap;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
 }
 
 .btn-run:hover:not(:disabled) {
-  box-shadow: 0 0 18px rgba(16, 185, 129, 0.45);
-  transform: translateY(-1px);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  border-color: rgba(16, 185, 129, 0.8);
 }
 
-.btn-run:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-.btn-run.running  { background: linear-gradient(135deg, #047857, #059669); }
+.btn-run:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-run.running  { background: linear-gradient(135deg, #047857, #059669); box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); animation: pulse-glow 1.5s infinite; }
 
 /* ─── Editor Area ─── */
 .editor-area {

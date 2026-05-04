@@ -9,6 +9,7 @@ import fileRoutes from './src/routes/fileRoutes.js';
 import executeRoutes from './src/routes/executeRoutes.js';
 import authRoutes from './src/routes/authRoutes.js';
 import aiRoutes from './src/routes/aiRoutes.js';
+import File from './src/models/File.js';
 
 dotenv.config();
 
@@ -69,12 +70,14 @@ io.on('connection', (socket) => {
   // Assign a random identity for presence if not logged in
   const userId = socket.handshake.query.userId || `guest-${socket.id.slice(0,4)}`;
   const userName = socket.handshake.query.userName || `Anonymous ${socket.id.slice(0,3)}`;
+  const sessionId = socket.handshake.query.sessionId || null;
   const userColor = USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
 
   onlineUsers.set(socket.id, {
     id: socket.id,
     userId,
     userName,
+    sessionId,
     userColor,
     fileId: null,
     cursor: { line: 1, col: 1 }
@@ -136,8 +139,23 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
+    const user = onlineUsers.get(socket.id);
     onlineUsers.delete(socket.id);
     io.emit('presence-update', Array.from(onlineUsers.values()));
+    
+    // Cleanup ephemeral guest files associated with this session
+    if (user && user.sessionId) {
+      File.deleteMany({ sessionId: user.sessionId, isGuest: true })
+        .then(res => {
+          if (res.deletedCount > 0) {
+            console.log(`🗑️ Cleaned up ${res.deletedCount} guest files for session ${user.sessionId}`);
+            // Tell remaining clients to refresh their file lists
+            io.emit('refresh_files'); // Use io.emit to tell everyone
+          }
+        })
+        .catch(err => console.error('Guest file cleanup error:', err));
+    }
+
     
     if (shell) {
       try {
@@ -151,7 +169,16 @@ io.on('connection', (socket) => {
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/devorbit')
-  .then(() => console.log('📦 Connected to MongoDB'))
+  .then(async () => {
+    console.log('📦 Connected to MongoDB');
+    // Cleanup old orphaned files on startup
+    try {
+      const res = await File.deleteMany({ ownerId: { $exists: false }, sessionId: { $exists: false } });
+      if (res.deletedCount > 0) console.log(`Sweep: Cleaned up ${res.deletedCount} old orphaned files.`);
+    } catch (err) {
+      console.error('Failed to cleanup old files:', err);
+    }
+  })
   .catch((err) => console.error('MongoDB connection error:', err));
 
 // Mount Routes

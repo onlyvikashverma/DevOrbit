@@ -32,24 +32,58 @@ const resolveSpecialPath = (targetPath) => {
 
 export const getFiles = async (req, res) => {
   try {
-    const rawFiles = await File.find({});
+    const { userId, sessionId } = req.query;
+    
+    // Build filter: either files owned by the logged in user, or guest files matching this session
+    const filter = {};
+    const conditions = [];
+    
+    if (userId) conditions.push({ ownerId: userId });
+    if (sessionId) conditions.push({ sessionId, isGuest: true });
+    
+    // Fallback: if no credentials passed, maybe don't return anything or return global (for backwards compat)
+    if (conditions.length > 0) {
+      filter.$or = conditions;
+    } else {
+      filter.isGuest = false; // Only return non-guest files if no specific user requested
+      filter.ownerId = { $exists: false }; // Global files
+    }
+
+    const rawFiles = await File.find(filter);
     const files = rawFiles.map(f => ({
       id: f._id.toString(),
       name: f.name,
       type: f.type,
       content: f.content,
-      parentId: f.parentId || null
+      parentId: f.parentId || null,
+      ownerId: f.ownerId || null,
+      sessionId: f.sessionId || null,
+      isGuest: f.isGuest
     }));
     res.status(200).json(files);
   } catch (error) {
+    console.error('getFiles error:', error);
     res.status(500).json({ error: 'Failed to fetch files' });
   }
 };
 
 export const createFile = async (req, res) => {
   try {
-    const { name, type, parentId, content } = req.body;
-    const newFileRaw = new File({ name, type, parentId, content });
+    const { name, type, parentId, content, ownerId, sessionId, isGuest } = req.body;
+    
+    const fileData = { 
+      name, 
+      type, 
+      content: content || '',
+      isGuest: !!isGuest
+    };
+
+    // Only add IDs if they are present and valid
+    if (parentId && parentId.match(/^[0-9a-fA-F]{24}$/)) fileData.parentId = parentId;
+    if (ownerId && ownerId.match(/^[0-9a-fA-F]{24}$/)) fileData.ownerId = ownerId;
+    if (sessionId) fileData.sessionId = sessionId;
+
+    const newFileRaw = new File(fileData);
     await newFileRaw.save();
     
     // Map to standardized format
@@ -58,12 +92,16 @@ export const createFile = async (req, res) => {
       name: newFileRaw.name,
       type: newFileRaw.type,
       content: newFileRaw.content,
-      parentId: newFileRaw.parentId || null
+      parentId: newFileRaw.parentId || null,
+      ownerId: newFileRaw.ownerId || null,
+      sessionId: newFileRaw.sessionId || null,
+      isGuest: newFileRaw.isGuest
     };
     
     res.status(201).json(newFile);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create file' });
+    console.error('createFile error:', error);
+    res.status(500).json({ error: error.message || 'Failed to create file' });
   }
 };
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Sidebar from './components/layout/Sidebar';
 import BottomConsole from './components/layout/BottomConsole';
 import MonacoWorkspace from './components/editor/MonacoWorkspace';
@@ -9,7 +9,7 @@ import { useAuthStore } from './store/useAuthStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useToast } from './components/ui/Toast';
 import { socket, connectSocket, disconnectSocket } from './services/socket';
-import { Play, LogIn, LogOut, Wifi, WifiOff, Zap, Sparkles } from 'lucide-react';
+import { Play, LogIn, LogOut, Wifi, WifiOff, Zap, Sparkles, Palette } from 'lucide-react';
 import './App.css';
 
 const BOILERPLATES = {
@@ -32,6 +32,14 @@ const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 const API_URL = `${BACKEND_URL}/api/files`;
 
 function App() {
+  const sessionId = useMemo(() => {
+    let sid = sessionStorage.getItem('devorbit_session_id');
+    if (!sid) {
+      sid = 'sess_' + Math.random().toString(36).substring(2, 15);
+      sessionStorage.setItem('devorbit_session_id', sid);
+    }
+    return sid;
+  }, []);
   const [activePanel, setActivePanel] = useState('explorer');
   const [files, setFiles] = useState([]);
   const [openFileIds, setOpenFileIds] = useState([]);
@@ -51,7 +59,7 @@ function App() {
   const [showPalette, setShowPalette] = useState(false);
 
   const { user, token, logout } = useAuthStore();
-  const { theme } = useSettingsStore();
+  const { theme, setTheme } = useSettingsStore();
   const toast = useToast();
 
   const currentFile = files.find(f => f.id === currentFileId) || null;
@@ -74,35 +82,31 @@ function App() {
   }, []);
 
   // ─── Fetch files ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    const fetchFiles = async () => {
-      try {
-        const res = await fetch(API_URL);
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setFiles(data);
-          const firstFile = data.find(f => f.type === 'file');
-          if (firstFile) { 
-            const fid = firstFile.id || firstFile._id?.toString();
-            setOpenFileIds([fid]); 
-            setCurrentFileId(fid); 
-          }
-        } else {
-          console.error('Expected array from files API, got:', data);
-          setFiles([]);
-        }
-      } catch (e) {
-        console.error('Failed to load files', e);
+  const fetchFiles = useCallback(async () => {
+    try {
+      const userId = user?.id || '';
+      const res = await fetch(`${API_URL}?sessionId=${sessionId}&userId=${userId}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setFiles(data);
+      } else {
+        console.error('Expected array from files API, got:', data);
         setFiles([]);
       }
-    };
+    } catch (e) {
+      console.error('Failed to load files', e);
+      setFiles([]);
+    }
+  }, [user, sessionId]);
+
+  useEffect(() => {
     fetchFiles();
-  }, []);
+  }, [fetchFiles]);
 
   // ─── Socket ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    // Pass user info during handshake for presence
-    const query = user ? { userId: user.id, userName: user.name } : {};
+    // Pass user info and sessionId during handshake for presence
+    const query = { sessionId, ...(user ? { userId: user.id, userName: user.name } : {}) };
     connectSocket(token, query);
 
     socket.on('connect', () => setConnected(true));
@@ -115,15 +119,20 @@ function App() {
     socket.on('code_update', ({ fileId, newCode }) => {
       setFiles(prev => prev.map(f => f.id === fileId ? { ...f, content: newCode } : f));
     });
+    socket.on('refresh_files', () => {
+      // Re-fetch files when another guest leaves and their files are deleted
+      fetchFiles();
+    });
 
     return () => {
       socket.off('connect');
       socket.off('disconnect');
       socket.off('presence-update');
       socket.off('code_update');
+      socket.off('refresh_files');
       disconnectSocket();
     };
-  }, [token, user]);
+  }, [token, user, sessionId, fetchFiles]);
 
   // ─── Code change ─────────────────────────────────────────────────────────
   const handleCodeChange = (fileId, value) => {
@@ -157,9 +166,22 @@ function App() {
       const resp = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, type, parentId, content: defaultContent })
+        body: JSON.stringify({ 
+          name, 
+          type, 
+          parentId, 
+          content: defaultContent,
+          ownerId: user?.id || null,
+          sessionId,
+          isGuest: !user
+        })
       });
+      
       const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data.error || 'Server failed to create node');
+      }
+
       // Ensure we have a string ID for React state consistency
       const newNode = { 
         ...data, 
@@ -186,7 +208,7 @@ function App() {
       toast.error('Failed to create file');
       console.error('Creation error:', e);
     }
-  }, [toast]);
+  }, [toast, user, sessionId]);
 
   // ─── Delete ───────────────────────────────────────────────────────────────
   const handleDeleteNode = useCallback(async (id) => {
@@ -428,6 +450,19 @@ function App() {
                 <LogIn size={14} /> Sign In
               </button>
             )}
+
+            <button 
+              className="icon-btn nav-icon-btn theme-btn"
+              onClick={() => {
+                const themes = ['midnight', 'cobalt', 'emerald', 'noir', 'vivid'];
+                const next = themes[(themes.indexOf(theme) + 1) % themes.length];
+                setTheme(next);
+                toast.success(`Theme: ${next.charAt(0).toUpperCase() + next.slice(1)}`);
+              }}
+              title="Switch Theme"
+            >
+              <Palette size={18} />
+            </button>
 
             <button 
               className={`icon-btn nav-icon-btn ai-toggle-btn ${showAiAssistant ? 'active' : ''}`}

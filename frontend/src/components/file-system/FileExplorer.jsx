@@ -56,9 +56,6 @@ const ContextMenu = ({ x, y, node, onRename, onDelete, onNewFile, onNewFolder, o
           <button className="ctx-item" onClick={() => { onNewFile(node.id); onClose(); }}>
             <FilePlus size={13} /> New File
           </button>
-          <button className="ctx-item" onClick={() => { onNewFolder(node.id); onClose(); }}>
-            <FolderPlus size={13} /> New Folder
-          </button>
           <div className="ctx-divider" />
         </>
       )}
@@ -238,9 +235,6 @@ const FileNode = ({
                 <button className="action-btn" title="New File" onClick={() => setInlineCreate({ type: 'file', parentId: node.id })}>
                   <FilePlus size={11} />
                 </button>
-                <button className="action-btn" title="New Folder" onClick={() => setInlineCreate({ type: 'folder', parentId: node.id })}>
-                  <FolderPlus size={11} />
-                </button>
               </>
             )}
             <button className="action-btn rename-btn" title="Rename" onClick={() => onTriggerRename(node.id)}>
@@ -320,9 +314,6 @@ const FileExplorer = ({
               <>
                 <button title="New File" onClick={() => setInlineCreate({ type: 'file' })}>
                   <FilePlus size={18} strokeWidth={2} />
-                </button>
-                <button title="New Folder" onClick={() => setInlineCreate({ type: 'folder' })}>
-                  <FolderPlus size={18} strokeWidth={2} />
                 </button>
               </>
           </div>

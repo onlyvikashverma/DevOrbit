@@ -131,7 +131,8 @@ const SettingsPanel = () => {
             { id: 'midnight', color: '#38bdf8' },
             { id: 'cobalt', color: '#60a5fa' },
             { id: 'emerald', color: '#34d399' },
-            { id: 'rose', color: '#fb7185' },
+            { id: 'noir', color: '#ffffff' },
+            { id: 'vivid', color: '#00f2ff' },
           ].map(t => (
             <button
               key={t.id}

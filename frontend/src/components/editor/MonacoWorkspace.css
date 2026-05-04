@@ -113,6 +113,27 @@
 
 .lang-select { font-size: 0.78rem; }
 
+.theme-toggle-small {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  margin-left: 0.5rem;
+  opacity: 0.7;
+}
+
+.theme-toggle-small:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  opacity: 1;
+}
+
 /* ─── Editor Body ─── */
 .editor-container {
   flex: 1;
